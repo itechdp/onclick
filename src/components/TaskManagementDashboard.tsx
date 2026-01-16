@@ -76,7 +76,7 @@ export function TaskManagementDashboard({
 }: TaskManagementDashboardProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [allUsers, setAllUsers] = useState<AppUser[]>([]);
-  const [subAdmins, setSubAdmins] = useState<SubAdmin[]>(mockSubAdmins);
+  const [subAdmins] = useState<SubAdmin[]>(mockSubAdmins);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedTeamMember, setSelectedTeamMember] = useState<TeamMember | null>(null);

@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { Task, SubAdmin, AppUser, TeamMember } from '../types';
 import { format, isPast, differenceInDays } from 'date-fns';
-import { CreateSubAdminModal } from './CreateSubAdminModal';
 import { CreateTaskModal } from './CreateTaskModal';
 import { TaskDetailsModal } from './TaskDetailsModal';
 import { AddTeamMemberModal } from './AddTeamMemberModal';
@@ -81,7 +80,6 @@ export function TaskManagementDashboard({
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedTeamMember, setSelectedTeamMember] = useState<TeamMember | null>(null);
-  const [showCreateSubAdmin, setShowCreateSubAdmin] = useState(false);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showAddTeamMember, setShowAddTeamMember] = useState(false);
   const [showEditTeamMember, setShowEditTeamMember] = useState(false);
@@ -130,16 +128,7 @@ export function TaskManagementDashboard({
   }, [loadData]);
 
   // Handler functions
-  const handleCreateSubAdmin = (subAdminData: Omit<SubAdmin, 'id' | 'createdAt' | 'createdBy'>) => {
-    const newSubAdmin: SubAdmin = {
-      ...subAdminData,
-      id: (subAdmins.length + 1).toString(),
-      createdAt: new Date(),
-      createdBy: 'master_admin'
-    };
-    setSubAdmins([...subAdmins, newSubAdmin]);
-    setShowCreateSubAdmin(false);
-  };
+
 
   const handleCreateTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
@@ -331,13 +320,6 @@ export function TaskManagementDashboard({
                   >
                     <UserPlus className="h-4 w-4 mr-2" />
                     Add Team Member
-                  </button>
-                  <button
-                    onClick={() => setShowCreateSubAdmin(true)}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-sharp flex items-center"
-                  >
-                    <Users className="h-4 w-4 mr-2" />
-                    Add Sub Admin
                   </button>
                   <button
                     onClick={() => setShowCreateTask(true)}
@@ -623,14 +605,6 @@ export function TaskManagementDashboard({
           }}
           onSuccess={handleTeamMemberEditSuccess}
           teamMember={selectedTeamMember}
-        />
-      )}
-
-      {showCreateSubAdmin && (
-        <CreateSubAdminModal
-          isOpen={showCreateSubAdmin}
-          onClose={() => setShowCreateSubAdmin(false)}
-          onCreateSubAdmin={handleCreateSubAdmin}
         />
       )}
 

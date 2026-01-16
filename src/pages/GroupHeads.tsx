@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Plus, Search, Edit2, Trash2, Eye, FileText, Phone, Mail, MapPin, TrendingUp, IndianRupee, Calendar, Printer } from 'lucide-react';
+import { Users, Plus, Search, Edit2, Trash2, Eye, FileText, Phone, Mail, IndianRupee, Printer } from 'lucide-react';
 import { groupHeadService, GroupHead } from '../services/groupHeadService';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -260,7 +260,7 @@ export function GroupHeads() {
                     <tr key={groupHead.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
-                          onClick={() => handleView(groupHead)}
+                          onClick={() => handleViewDetails(groupHead)}
                           className="text-sm font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors text-left"
                         >
                           {groupHead.groupHeadName}

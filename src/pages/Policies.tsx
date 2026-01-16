@@ -547,8 +547,8 @@ export function Policies() {
       escapeCSV(policy.insuranceCompany),
       escapeCSV(policy.policyNumber),
       escapeCSV(policy.productType),
-      escapeCSV(policy.policyStartDate),
-      escapeCSV(policy.policyEndDate),
+      escapeCSV(policy.policyStartDate instanceof Date ? policy.policyStartDate.toISOString() : policy.policyStartDate),
+      escapeCSV(policy.policyEndDate instanceof Date ? policy.policyEndDate.toISOString() : policy.policyEndDate),
       escapeCSV(policy.premiumAmount || 0),
       escapeCSV(policy.remark)
     ]);

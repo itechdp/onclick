@@ -3,7 +3,6 @@ import { Policy, DeletedPolicy, ActivityLog } from '../types';
 import { policyService } from '../services/policyService';
 import { activityLogService } from '../services/activityLogService';
 import { deletedPolicyService } from '../services/deletedPolicyService';
-import { userService } from '../services/userService';
 import { supabase } from '../config/supabase';
 import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
@@ -93,7 +92,7 @@ export function PolicyProvider({ children }: { children: ReactNode }) {
     try {
       // If admin, get all policies. Otherwise, use effective user ID
       const userId = user && user.role !== 'admin' ? effectiveUserId : undefined;
-      const data = await deletedPolicyService.getDeletedPolicies(userId);
+      const data = await deletedPolicyService.getDeletedPolicies(userId || undefined);
       setDeletedPolicies(data);
     } catch (err) {
       console.error('Error fetching deleted policies:', err);

@@ -21,6 +21,8 @@ export interface Policy {
   documents?: unknown[];
   createdAt: Date;
   updatedAt: Date;
+  memberOf?: string; // Group head ID
+  member_of?: string; // Database column name
   // Legacy fields for backward compatibility
   startDate?: string;
   expiryDate?: string;

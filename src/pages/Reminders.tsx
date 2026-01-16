@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { usePolicies } from '../context/PolicyContext';
 import { Policy } from '../types';
-import { AlertTriangle, Calendar, Clock, Building, MessageCircle, FileX, Eye, RefreshCw, FileText, StickyNote, Printer, Filter } from 'lucide-react';
+import { AlertTriangle, Calendar, Clock, Building, MessageCircle, FileX, Eye, RefreshCw, FileText, StickyNote, Printer } from 'lucide-react';
 import { format, differenceInDays, isAfter, isBefore, addDays } from 'date-fns';
 import toast from 'react-hot-toast';
 import { markPolicyAsLapsed } from '../services';

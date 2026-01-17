@@ -13,7 +13,7 @@ export default async function handler(req: Request) {
     
     // Forward the request to n8n webhook
     const response = await fetch(
-      'https://n8n.srv954870.hstgr.cloud/webhook-test/7fc9bf52-5516-40ea-8f30-8a7ffd058651',
+      'https://n8n.srv954870.hstgr.cloud/webhook/7fc9bf52-5516-40ea-8f30-8a7ffd058651',
       {
         method: 'POST',
         headers: {

@@ -73,6 +73,47 @@ export class SupabaseAuthService {
       // Parse the returned data using the helper method
       const parsedUser = this.parseUserData(profileData);
 
+      // Send user data to webhook via Vite proxy
+      console.log('🔔 Attempting to send webhook notification...');
+      try {
+        const webhookData = {
+          userId: parsedUser.id,
+          email: parsedUser.email,
+          displayName: parsedUser.displayName,
+          role: parsedUser.role,
+          subscriptionStatus: parsedUser.subscriptionStatus,
+          trialStartDate: parsedUser.trialStartDate,
+          trialEndDate: parsedUser.trialEndDate,
+          createdAt: parsedUser.createdAt,
+          timestamp: new Date().toISOString(),
+        };
+        
+        console.log('📤 Webhook payload:', webhookData);
+        
+        // Use Vite proxy to avoid CORS issues
+        const response = await fetch('/n8n-webhook/webhook/7fc9bf52-5516-40ea-8f30-8a7ffd058651', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(webhookData),
+        });
+        
+        console.log('✅ Webhook response status:', response.status);
+        console.log('✅ Webhook response ok:', response.ok);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Webhook failed with status:', response.status, errorText);
+        } else {
+          console.log('✅ Webhook notification sent successfully for:', parsedUser.email);
+        }
+      } catch (webhookError) {
+        console.error('❌ Failed to send webhook notification:', webhookError);
+        console.error('❌ Error details:', webhookError instanceof Error ? webhookError.message : 'Unknown error');
+        // Don't fail signup if webhook fails
+      }
+
       return { 
         user: parsedUser, 
         error: null 

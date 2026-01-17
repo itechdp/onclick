@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { LoginCredentials } from '../types';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { Shield, Mail, Lock, CreditCard, XCircle } from 'lucide-react';
+import { Mail, Lock, CreditCard, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Login: React.FC = () => {

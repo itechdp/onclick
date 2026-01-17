@@ -83,14 +83,12 @@ export function Sidebar() {
         <div className="flex flex-col h-full">
           {/* Logo Section */}
           <div className="flex items-center p-4 border-b border-gray-200 dark:border-gray-700">
-            <Link to="/" className="flex items-center space-x-2" onClick={() => setIsMobileOpen(false)}>
-              <div className="bg-blue-700 dark:bg-gradient-to-r dark:from-blue-600 dark:to-indigo-600 p-2 rounded-sharp flex-shrink-0">
-                <Shield className="h-6 w-6 text-white" />
-              </div>
+            <Link to="/" className="flex items-center justify-center w-full" onClick={() => setIsMobileOpen(false)}>
               {!isCollapsed && (
-                <span className="text-lg font-bold text-slate-900 dark:bg-gradient-to-r dark:from-blue-600 dark:to-indigo-600 dark:bg-clip-text dark:text-transparent">
-                  OnClicks Policy Manager
-                </span>
+                <img src="/onclickslogin.png" alt="OnClicks Logo" className="h-16 w-auto object-contain" />
+              )}
+              {isCollapsed && (
+                <img src="/onclickslogin.png" alt="OnClicks Logo" className="h-10 w-auto object-contain" />
               )}
             </Link>
           </div>

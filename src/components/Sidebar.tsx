@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Shield, Plus, Bell, User, LogOut, Moon, Sun, Menu, X, Home, FileText, CheckSquare, Clock, XCircle, DollarSign, Activity, RotateCcw, HelpCircle, Percent, Users, Crown, UserCircle, FolderOpen, UserPlus, UsersRound } from 'lucide-react';
+import { Plus, Bell, User, LogOut, Moon, Sun, Menu, X, Home, FileText, CheckSquare, Clock, XCircle, DollarSign, Activity, RotateCcw, HelpCircle, Percent, Users, Crown, UserCircle, FolderOpen, UserPlus, UsersRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import toast from 'react-hot-toast';

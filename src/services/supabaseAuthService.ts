@@ -90,8 +90,8 @@ export class SupabaseAuthService {
         
         console.log('📤 Webhook payload:', webhookData);
         
-        // Use Vite proxy to avoid CORS issues
-        const response = await fetch('/n8n-webhook/webhook/7fc9bf52-5516-40ea-8f30-8a7ffd058651', {
+        // Use API route which works in both development and production
+        const response = await fetch('/api/send-webhook', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

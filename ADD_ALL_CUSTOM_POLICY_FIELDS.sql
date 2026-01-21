@@ -1,7 +1,7 @@
 -- Comprehensive migration to add all missing custom fields to policies table
 -- This ensures all fields used by the application are available in the database
 
--- Add commission columns (main requirement)
+-- Add commission columns (main requirements)
 ALTER TABLE policies 
 ADD COLUMN IF NOT EXISTS commission_percentage TEXT,
 ADD COLUMN IF NOT EXISTS commission_amount TEXT;

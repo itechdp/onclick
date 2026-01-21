@@ -56,6 +56,7 @@ const INSURANCE_COMPANIES = [
   'Universal Sompo General Insurance Co. Ltd.',
   'Liberty General Insurance Ltd.',
   'Magma HDI General Insurance Co. Ltd.',
+  'Magma General Insurance',
   'Raheja QBE General Insurance Co. Ltd.',
   'Shriram General Insurance Co. Ltd.',
   'Navi General Insurance Ltd.',

@@ -65,8 +65,7 @@ export async function getClientFolders(userId: string): Promise<ClientFolder[]> 
         const files = await storageService.listUserFiles(
           userId,
           'client-documents',
-          folder.policyholderName,
-          folder.policyNumber // Use policy number as identifier
+          folder.policyholderName
         );
         folder.documentCount = files.length;
       } catch (error) {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Policy } from '../types';
-import { X, Save, Calendar, User, FileText, DollarSign, Phone, Car, Hash, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, Save, Calendar, User, FileText, DollarSign, Phone, Car, Hash } from 'lucide-react';
 
 interface EditPolicyModalProps {
   policy: Policy;

@@ -111,8 +111,7 @@ export function ClientFolders() {
       const results = await storageService.uploadMultipleClientDocuments(
         uploadFiles,
         effectiveUserId,
-        selectedFolder.policyholderName, // Customer name
-        selectedFolder.policyNumber // Policy number for uniqueness
+        selectedFolder.policyholderName // Only customer name needed
       );
 
       const successCount = results.filter((r) => r !== null).length;
@@ -145,8 +144,7 @@ export function ClientFolders() {
       const files = await storageService.listUserFiles(
         effectiveUserId, 
         'client-documents',
-        folder.policyholderName, // Customer name
-        folder.policyNumber // Policy number for uniqueness
+        folder.policyholderName // Only customer name needed
       );
       setDocuments(files);
     } catch (error) {
@@ -179,8 +177,7 @@ export function ClientFolders() {
           const files = await storageService.listUserFiles(
             effectiveUserId, 
             'client-documents',
-            selectedFolder.policyholderName,
-            selectedFolder.policyNumber
+            selectedFolder.policyholderName // Only customer name needed
           );
           setDocuments(files);
         }

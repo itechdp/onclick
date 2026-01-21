@@ -827,7 +827,7 @@ export function AddPolicy() {
     }
 
     setIsUploading(true);
-    const toastId = toast.loading(`Uploading ${pdfFiles.length} file(s)...`);
+    const toastId = toast.loading(`Uploading ${pdfFiles.length} file(s) to client folder...`);
 
     try {
       if (!effectiveUserId || !user) {
@@ -836,10 +836,24 @@ export function AddPolicy() {
         return;
       }
 
-      // Upload files to Supabase
-      const uploadResults = await storageService.uploadMultiplePDFs(pdfFiles, effectiveUserId);
+      const successfulUploads: Array<{ url: string; path: string; file: File }> = [];
       
-      const successfulUploads = uploadResults.filter(result => result !== null) as Array<{ url: string; path: string; fileName: string }>;
+      // Upload each file to client folder
+      for (const file of pdfFiles) {
+        const uploadResult = await storageService.uploadPolicyDocument(
+          file,
+          effectiveUserId,
+          formData.policyholderName || 'temp_client'
+        );
+        
+        if (uploadResult) {
+          successfulUploads.push({ 
+            url: uploadResult.url, 
+            path: uploadResult.path,
+            file: file
+          });
+        }
+      }
       
       if (successfulUploads.length === 0) {
         toast.error('Failed to upload files', { id: toastId });
@@ -847,8 +861,8 @@ export function AddPolicy() {
       }
 
       // Add to uploaded PDFs list
-      const newUploads = successfulUploads.map((result, index) => ({
-        file: pdfFiles[index],
+      const newUploads = successfulUploads.map(result => ({
+        file: result.file,
         url: result.url,
         path: result.path
       }));
@@ -865,7 +879,7 @@ export function AddPolicy() {
         }));
       }
 
-      toast.success(`${successfulUploads.length} file(s) uploaded successfully!`, { id: toastId });
+      toast.success(`${successfulUploads.length} file(s) uploaded to client folder!`, { id: toastId });
     } catch (error) {
       console.error('Error uploading files:', error);
       toast.error('Failed to upload files', { id: toastId });
@@ -878,7 +892,7 @@ export function AddPolicy() {
     const pdf = uploadedPDFs[index];
     
     // Delete from Supabase storage
-    const deleted = await storageService.deleteFile(pdf.path);
+    const deleted = await storageService.deletePolicyDocument(pdf.path);
     
     if (deleted) {
       const newUploadedPDFs = uploadedPDFs.filter((_, i) => i !== index);
@@ -968,16 +982,14 @@ export function AddPolicy() {
         return;
       }
 
-      // Get customer name and use policy number as unique identifier (we know it before saving)
+      // Get customer name
       const customerName = formData.policyholderName || 'general';
-      const policyIdentifier = formData.policyNumber || `GEN-${Date.now()}`; // Use policy number
       
       // Upload files to Supabase client documents bucket with customer folder
       const uploadResults = await storageService.uploadMultipleClientDocuments(
         files, 
         effectiveUserId,
-        customerName,
-        policyIdentifier // Use policy number as identifier
+        customerName
       );
       
       const successfulUploads = uploadResults.filter(result => result !== null) as Array<{ url: string; path: string; fileName: string }>;
@@ -1105,18 +1117,54 @@ export function AddPolicy() {
       // Auto-fill form with extracted data from n8n
       debugLog('📝 Auto-filling form with n8n extracted data...');
       
-      // Store file information
-      setFormData(prev => ({
-        ...prev,
-        pdfFile: file,
-        pdfFileName: file.name
-      }));
-      
       // Combine extracted data and additional data for comprehensive auto-fill
       const combinedData = { ...extractedData, ...additionalData };
       
       // Use our dedicated auto-fill function
       autoFillFormFromN8nData(combinedData);
+      
+      // Upload the AI-processed PDF to client folder and add to uploadedPDFs
+      if (user && extractedData.policyholderName && (effectiveUserId || user.userId)) {
+        debugLog('📤 Uploading AI-processed PDF to temporary client folder...');
+        toast.loading('Uploading policy document...', { id: 'ai-upload' });
+        
+        const uploadResult = await storageService.uploadPolicyDocument(
+          file,
+          effectiveUserId || user.userId || '',
+          extractedData.policyholderName
+        );
+        
+        if (uploadResult) {
+          // Add to uploadedPDFs list
+          setUploadedPDFs(prev => [...prev, {
+            file: file,
+            url: uploadResult.url,
+            path: uploadResult.path
+          }]);
+          
+          // Store file information in form data
+          setFormData(prev => ({
+            ...prev,
+            pdfFile: file,
+            pdfFileName: file.name,
+            driveFileUrl: uploadResult.url,
+            fileId: uploadResult.path
+          }));
+          
+          toast.success('Policy document uploaded!', { id: 'ai-upload' });
+          debugLog('✅ AI-processed PDF uploaded to client folder');
+        } else {
+          toast.dismiss('ai-upload');
+          debugLog('⚠️ Failed to upload AI-processed PDF');
+        }
+      } else {
+        // Just store file information without uploading yet
+        setFormData(prev => ({
+          ...prev,
+          pdfFile: file,
+          pdfFileName: file.name
+        }));
+      }
 
       // If in multi-file mode, show success and prepare for next file
       if (isMultiFileMode) {
@@ -1297,7 +1345,8 @@ export function AddPolicy() {
         driveFileUrl: formData.driveFileUrl
       };
 
-      await addPolicy(policyData); // No file parameter needed
+      // Add policy (no longer need to track policyId since files are already in correct location)
+      await addPolicy(policyData);
       
       // Handle multi-file mode: stay on page and process next file
       if (isMultiFileMode && currentFileIndex < selectedFiles.length - 1) {
@@ -1391,10 +1440,10 @@ export function AddPolicy() {
       return;
     }
     
-    // Calculate commission amount when commission percentage or net/OD premium changes
+    // Calculate commission amount and total premium when relevant fields change
     // For Two wheeler/Four wheeler: commission is calculated on OD Premium only
     // For others: commission is calculated on Net Premium
-    if (name === 'commissionPercentage' || name === 'netPremium' || name === 'odPremium' || name === 'thirdPartyPremium') {
+    if (name === 'commissionPercentage' || name === 'netPremium' || name === 'odPremium' || name === 'thirdPartyPremium' || name === 'gst') {
       setFormData(prev => {
         const updatedData = { ...prev, [name]: value };
         
@@ -1435,7 +1484,22 @@ export function AddPolicy() {
             updatedData.commissionAmount = commissionAmount > 0 ? commissionAmount.toFixed(2) : '';
           }
         }
-        // Note: thirdPartyPremium changes don't affect commission calculation
+        
+        // Auto-calculate Total Premium based on product type
+        if (isTwoOrFourWheeler) {
+          // For Two/Four Wheeler: Total Premium = OD Premium + Third Party Premium + GST
+          const od = parseFloat(name === 'odPremium' ? value : prev.odPremium || '0');
+          const tp = parseFloat(name === 'thirdPartyPremium' ? value : prev.thirdPartyPremium || '0');
+          const gst = parseFloat(name === 'gst' ? value : prev.gst || '0');
+          const total = od + tp + gst;
+          updatedData.totalPremium = total > 0 ? total.toFixed(2) : '';
+        } else {
+          // For Others: Total Premium = Net Premium + GST
+          const netPremium = parseFloat(name === 'netPremium' ? value : prev.netPremium || '0');
+          const gst = parseFloat(name === 'gst' ? value : prev.gst || '0');
+          const total = netPremium + gst;
+          updatedData.totalPremium = total > 0 ? total.toFixed(2) : '';
+        }
         
         return updatedData;
       });
@@ -2018,13 +2082,21 @@ export function AddPolicy() {
                     />
                   </div>
 
-                  {/* Four Wheeler Specific Fields */}
-                  {productType === 'FOUR WHEELER' && (
+                  {/* Motor Vehicle Specific Fields */}
+                  {(productType.toLowerCase().includes('two-wheeler') || 
+                    productType.toLowerCase().includes('two wheeler') ||
+                    productType.toLowerCase().includes('four-wheeler') ||
+                    productType.toLowerCase().includes('four wheeler') ||
+                    productType.toLowerCase().includes('private car') ||
+                    productType.toLowerCase().includes('commercial vehicle') ||
+                    productType.toLowerCase().includes('third party motor') ||
+                    productType.toLowerCase().includes('comprehensive motor') ||
+                    productType.toLowerCase().includes('standalone own damage')) && (
                     <>
-                      {/* Registration No */}
+                      {/* Vehicle Registration No */}
                       <div>
                         <label htmlFor="registrationNo" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                          Registration No
+                          Vehicle Registration No <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -2033,30 +2105,14 @@ export function AddPolicy() {
                           value={formData.registrationNo}
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm"
-                          placeholder="Enter registration number"
+                          placeholder="Enter vehicle registration number"
                         />
                       </div>
 
-                      {/* Engine No */}
-                      <div>
-                        <label htmlFor="engineNo" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                          Engine No
-                        </label>
-                        <input
-                          type="text"
-                          id="engineNo"
-                          name="engineNo"
-                          value={formData.engineNo}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm"
-                          placeholder="Enter engine number"
-                        />
-                      </div>
-
-                      {/* Chassis No */}
+                      {/* Vehicle Chassis No */}
                       <div>
                         <label htmlFor="chasisNo" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                          Chassis No
+                          Vehicle Chassis No <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -2065,7 +2121,23 @@ export function AddPolicy() {
                           value={formData.chasisNo}
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm"
-                          placeholder="Enter chassis number"
+                          placeholder="Enter vehicle chassis number"
+                        />
+                      </div>
+
+                      {/* Vehicle Engine No */}
+                      <div>
+                        <label htmlFor="engineNo" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                          Vehicle Engine No <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          id="engineNo"
+                          name="engineNo"
+                          value={formData.engineNo}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm"
+                          placeholder="Enter vehicle engine number"
                         />
                       </div>
 

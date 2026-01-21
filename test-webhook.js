@@ -3,7 +3,7 @@ const testWebhook = async () => {
   try {
     console.log('Testing webhook...');
     
-    const response = await fetch('https://n8n.srv954870.hstgr.cloud/webhook/e143d432-be0e-4631-a5ab-7172f0221f6f', {
+    const response = await fetch('https://n8n.srv954870.hstgr.cloud/webhook/fe134dec-ce75-4e75-bb7b-b88a06fb0422', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

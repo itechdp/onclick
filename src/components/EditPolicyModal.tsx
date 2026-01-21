@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Policy } from '../types';
-import { X, Save, Calendar, User, FileText, DollarSign, Phone, Car, Hash, ExternalLink, Link, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, Save, Calendar, User, FileText, DollarSign, Phone, Car, Hash, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface EditPolicyModalProps {
   policy: Policy;
@@ -58,6 +58,7 @@ export function EditPolicyModal({ policy, isOpen, onClose, onSave }: EditPolicyM
     }
   };
 
+  // Remove all upload-related handler functions
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -488,89 +489,6 @@ export function EditPolicyModal({ policy, isOpen, onClose, onSave }: EditPolicyM
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   />
-                </div>
-              </div>
-            </div>
-
-            {/* Document Links */}
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                <ExternalLink className="h-5 w-5 mr-2 text-indigo-600 dark:text-indigo-400" />
-                Document Links
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Documents Folder Link
-                    {formData.documentsFolderLink ? (
-                      <CheckCircle className="h-4 w-4 ml-2 text-green-500" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 ml-2 text-red-500" />
-                    )}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="url"
-                      name="documentsFolderLink"
-                      value={formData.documentsFolderLink}
-                      onChange={handleInputChange}
-                      placeholder="https://drive.google.com/drive/folders/..."
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white ${
-                        formData.documentsFolderLink 
-                          ? 'border-green-300 dark:border-green-600' 
-                          : 'border-red-300 dark:border-red-600'
-                      }`}
-                    />
-                    {formData.documentsFolderLink && (
-                      <button
-                        type="button"
-                        onClick={() => window.open(formData.documentsFolderLink, '_blank')}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-500 hover:text-blue-700"
-                      >
-                        <Link className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Google Drive folder link for client documents
-                  </p>
-                </div>
-
-                <div>
-                  <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    PDF Document Link
-                    {formData.driveFileUrl ? (
-                      <CheckCircle className="h-4 w-4 ml-2 text-green-500" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 ml-2 text-red-500" />
-                    )}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="url"
-                      name="driveFileUrl"
-                      value={formData.driveFileUrl}
-                      onChange={handleInputChange}
-                      placeholder="https://drive.google.com/file/d/..."
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white ${
-                        formData.driveFileUrl 
-                          ? 'border-green-300 dark:border-green-600' 
-                          : 'border-red-300 dark:border-red-600'
-                      }`}
-                    />
-                    {formData.driveFileUrl && (
-                      <button
-                        type="button"
-                        onClick={() => window.open(formData.driveFileUrl, '_blank')}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-500 hover:text-blue-700"
-                      >
-                        <Link className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Direct link to policy PDF document
-                  </p>
                 </div>
               </div>
             </div>

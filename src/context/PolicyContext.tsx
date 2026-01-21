@@ -13,7 +13,7 @@ interface PolicyContextType {
   deletedPolicies: DeletedPolicy[];
   loading: boolean;
   error: string | null;
-  addPolicy: (policy: Omit<Policy, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addPolicy: (policy: Omit<Policy, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
   deletePolicy: (id: string) => Promise<void>;
   updatePolicy: (id: string, policy: Partial<Policy>) => Promise<void>;
   restorePolicy: (deletedPolicy: DeletedPolicy) => Promise<void>;
@@ -116,12 +116,12 @@ export function PolicyProvider({ children }: { children: ReactNode }) {
     }
   }, [effectiveUserId]);
 
-  const addPolicy = async (policyData: Omit<Policy, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addPolicy = async (policyData: Omit<Policy, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
     try {
       setLoading(true);
       
-      // Add policy to database with user information
-      await policyService.addPolicy(policyData, user?.id, user?.displayName);
+      // Add policy to database with user information - returns the policy ID
+      const policyId = await policyService.addPolicy(policyData, user?.id, user?.displayName);
       
       // Refresh policies and activity logs
       await Promise.all([
@@ -131,6 +131,7 @@ export function PolicyProvider({ children }: { children: ReactNode }) {
       
       toast.success('Policy added successfully!');
       
+      return policyId;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add policy';
       toast.error(errorMessage);

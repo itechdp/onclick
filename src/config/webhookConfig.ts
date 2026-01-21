@@ -1,7 +1,7 @@
 // Environment configuration for webhook URLs
 export const config = {
   // n8n Cloud Production URL
-  WEBHOOK_URL: 'https://n8n.srv954870.hstgr.cloud/webhook/e143d432-be0e-4631-a5ab-7172f0221f6f',
+  WEBHOOK_URL: 'https://n8n.srv954870.hstgr.cloud/webhook/fe134dec-ce75-4e75-bb7b-b88a06fb0422',
   
   
   // Request timeout in milliseconds

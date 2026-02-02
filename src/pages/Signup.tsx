@@ -23,10 +23,46 @@ export function Signup() {
       return;
     }
 
-    // Validate mobile number format (10 digits)
-    const mobileRegex = /^[0-9]{10}$/;
+    // Validate mobile number format (10 digits, must start with 6-9)
+    const mobileRegex = /^[6-9][0-9]{9}$/;
     if (!mobileRegex.test(formData.mobileNumber)) {
-      toast.error('Please enter a valid 10-digit mobile number');
+      toast.error('Please enter a valid 10-digit Indian mobile number (must start with 6-9)');
+      return;
+    }
+
+    // Check for dummy/invalid patterns
+    const blockedPatterns = [
+      /^(.)\1{9}$/,                 // 0000000000, 1111111111, ..., 9999999999
+
+      /^0123456789$/,
+      /^1234567890$/,
+      /^2345678901$/,
+      /^3456789012$/,
+      /^4567890123$/,
+      /^5678901234$/,
+      /^6789012345$/,
+      /^7890123456$/,
+      /^8901234567$/,
+      /^9012345678$/,
+
+      /^9876543210$/,
+      /^8765432109$/,
+      /^7654321098$/,
+      /^6543210987$/,
+      /^5432109876$/,
+      /^4321098765$/,
+      /^3210987654$/,
+      /^2109876543$/,
+      /^1098765432$/,
+      /^0987654321$/,
+
+      /^(\d{2})\1{4}$/,             // 1212121212, 9090909090, 1010101010
+      /^(\d{3})\1{2}$/,             // 1231231231, 3213213213
+    ];
+
+    const isDummy = blockedPatterns.some(pattern => pattern.test(formData.mobileNumber));
+    if (isDummy) {
+      toast.error('Please enter a valid mobile number. Dummy numbers are not allowed.');
       return;
     }
 
@@ -141,10 +177,11 @@ export function Signup() {
                     setFormData({ ...formData, mobileNumber: value });
                   }}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="10-digit mobile number"
+                  placeholder="Enter 10-digit mobile (6-9 series)"
                   required
                   maxLength={10}
-                  pattern="[0-9]{10}"
+                  pattern="[6-9][0-9]{9}"
+                  title="Enter a valid 10-digit Indian mobile number starting with 6-9"
                 />
               </div>
             </div>

@@ -46,6 +46,7 @@ export class UserService {
         userId: row.id, // Use id as userId for compatibility
         displayName: row.display_name,
         email: row.email,
+        mobileNumber: row.mobile_number || '',
         role: row.role,
         isActive: row.is_active,
         createdAt: new Date(row.created_at),
@@ -82,6 +83,7 @@ export class UserService {
         userId: data.id,
         displayName: data.display_name,
         email: data.email,
+        mobileNumber: data.mobile_number || '',
         role: data.role,
         isActive: data.is_active,
         createdAt: new Date(data.created_at),

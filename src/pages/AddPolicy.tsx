@@ -96,13 +96,11 @@ export function AddPolicy() {
   // Dynamic dropdown options from policy_settings
   const [insuranceCompanies, setInsuranceCompanies] = useState<string[]>([]);
   const [productTypes, setProductTypes] = useState<string[]>([]);
-  const [isLoadingDropdowns, setIsLoadingDropdowns] = useState(true);
 
   // Fetch dropdown options from policy_settings
   useEffect(() => {
     const fetchDropdownOptions = async () => {
       try {
-        setIsLoadingDropdowns(true);
         const settingsGrouped = await policySettingsService.getAllSettings();
         
         // Extract insurance companies from grouped settings
@@ -125,8 +123,6 @@ export function AddPolicy() {
         // Always fall back to defaults on error so users can still use the form
         setInsuranceCompanies(DEFAULT_INSURANCE_COMPANIES);
         setProductTypes(DEFAULT_PRODUCT_TYPES);
-      } finally {
-        setIsLoadingDropdowns(false);
       }
     };
 

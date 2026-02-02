@@ -19,6 +19,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   useEffect(() => {
     const checkAccessAndSubscription = async () => {
+      console.log('🛡️ ProtectedRoute - Loading:', loading, 'User:', !!user, 'TeamMember:', !!teamMember);
+      
+      // Don't check anything while still loading
+      if (loading) {
+        return;
+      }
+      
       // Team members: check if they have access to current page
       if (isTeamMember && teamMember) {
         const currentPath = location.pathname;
@@ -37,8 +44,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         return;
       }
       
-      if (!user) {
+      if (!user && !loading) {
+        console.log('❌ No user found after loading complete, will redirect to login');
         setShouldRedirect(true);
+        return;
+      }
+
+      // If no user at this point, return
+      if (!user) {
         return;
       }
 
@@ -79,9 +92,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     };
 
     checkAccessAndSubscription();
-  }, [user, teamMember, isTeamMember, pageAccess, navigate, location.pathname]);
+  }, [user, teamMember, isTeamMember, pageAccess, navigate, location.pathname, loading]);
 
   if (loading) {
+    console.log('⏳ ProtectedRoute: Still loading auth...');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
         <div className="text-center">
@@ -93,6 +107,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!user && !teamMember) {
+    console.log('🚫 ProtectedRoute: No auth found, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 

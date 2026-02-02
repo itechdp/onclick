@@ -30,18 +30,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check for existing session
     const initializeAuth = async () => {
       try {
-        const timeoutPromise = new Promise<null>((resolve) => {
-          setTimeout(() => resolve(null), 3000);
-        });
-
-        const currentUser = await Promise.race([
-          supabaseAuthService.getCurrentUser(),
-          timeoutPromise
-        ]);
+        console.log('🔄 Initializing auth...');
         
-        if (currentUser) {
-          setUser(currentUser);
-          setEffectiveUserId(currentUser.id); // Set effectiveUserId for regular users
+        // First, check if there's a team member session in localStorage
+        const teamMemberSession = localStorage.getItem('teamMemberSession');
+        if (teamMemberSession) {
+          try {
+            console.log('👥 Found team member session in localStorage');
+            const parsedSession = JSON.parse(teamMemberSession);
+            // Verify the session is still valid by checking if team member still exists
+            const teamMemberData = await teamMemberService.getTeamMemberById(parsedSession.id);
+            if (teamMemberData && teamMemberData.isActive) {
+              console.log('✅ Team member session valid, restoring...');
+              setTeamMember(teamMemberData);
+              setPageAccess(teamMemberData.permissions?.pageAccess || []);
+              setEffectiveUserId(teamMemberData.adminUserId);
+              setLoading(false);
+              return; // Exit early - team member session restored
+            } else {
+              console.log('❌ Team member session invalid, clearing...');
+              // Invalid session, clear it
+              localStorage.removeItem('teamMemberSession');
+            }
+          } catch (err) {
+            console.error('Error parsing team member session:', err);
+            localStorage.removeItem('teamMemberSession');
+          }
+        }
+
+        // If no team member session, check for regular user session via Supabase
+        console.log('🔍 Checking for Supabase user session...');
+        
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Session data:', session ? 'Session exists' : 'No session');
+        
+        if (session?.user) {
+          console.log('✅ Found active Supabase session');
+          
+          const timeoutPromise = new Promise<null>((resolve) => {
+            setTimeout(() => {
+              console.log('⏱️ User profile fetch timed out in initializeAuth');
+              resolve(null);
+            }, 3000);
+          });
+          
+          const currentUser = await Promise.race([
+            supabaseAuthService.getCurrentUser(),
+            timeoutPromise
+          ]);
+          
+          if (currentUser) {
+            console.log('✅ User profile loaded:', currentUser.email);
+            setUser(currentUser);
+            setEffectiveUserId(currentUser.id);
+          } else {
+            console.log('⚠️ Could not load user profile, but session exists');
+          }
+        } else {
+          console.log('❌ No active session found');
         }
       } catch (error) {
         console.error('Auth error:', error);
@@ -54,38 +100,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event);
+      console.log('🔔 Auth state change:', event, 'Has session:', !!session);
+      
+      // Ignore INITIAL_SESSION event - we handle it in initializeAuth
+      if (event === 'INITIAL_SESSION') {
+        console.log('ℹ️ Ignoring INITIAL_SESSION - handled by initializeAuth');
+        return;
+      }
       
       if (event === 'SIGNED_IN' && session) {
-        const timeoutPromise = new Promise<null>((resolve) => {
-          setTimeout(() => resolve(null), 3000);
-        });
+        console.log('✅ SIGNED_IN event - fetching user profile');
         
-        const currentUser = await Promise.race([
-          supabaseAuthService.getCurrentUser(),
-          timeoutPromise
-        ]);
-        
-        // Only set user if we got a valid user object
-        if (currentUser) {
-          setUser(currentUser);
+        try {
+          const timeoutPromise = new Promise<null>((resolve) => {
+            setTimeout(() => {
+              console.log('⏱️ User profile fetch timed out');
+              resolve(null);
+            }, 3000);
+          });
+          
+          const currentUser = await Promise.race([
+            supabaseAuthService.getCurrentUser(),
+            timeoutPromise
+          ]);
+          
+          // Only set user if we got a valid user object
+          if (currentUser) {
+            console.log('✅ User profile loaded after SIGNED_IN');
+            setUser(currentUser);
+            setEffectiveUserId(currentUser.id);
+          } else {
+            console.log('⚠️ Could not load user profile after SIGNED_IN');
+          }
+        } catch (error) {
+          console.error('❌ Error loading user profile after SIGNED_IN:', error);
         }
-        setLoading(false);
       } else if (event === 'SIGNED_OUT') {
+        console.log('🚪 SIGNED_OUT event - clearing user state');
         setUser(null);
-        setLoading(false);
+        setTeamMember(null);
+        setPageAccess([]);
+        setEffectiveUserId(null);
+        localStorage.removeItem('teamMemberSession');
       } else if (event === 'TOKEN_REFRESHED') {
         // Token refreshed successfully, re-fetch user
-        console.log('Token refreshed, re-fetching user');
+        console.log('🔄 Token refreshed, re-fetching user');
         const currentUser = await supabaseAuthService.getCurrentUser();
         if (currentUser) {
           setUser(currentUser);
+          setEffectiveUserId(currentUser.id);
         }
       } else if (event === 'USER_UPDATED') {
         // User data updated, refresh
+        console.log('📝 User updated, re-fetching');
         const currentUser = await supabaseAuthService.getCurrentUser();
         if (currentUser) {
           setUser(currentUser);
+          setEffectiveUserId(currentUser.id);
         }
       }
     });
@@ -110,6 +181,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Team member login successful - use admin's user ID for data access
           console.log('Team member authenticated:', teamMemberAuth);
           console.log('Setting pageAccess to:', teamMemberAuth.permissions?.pageAccess);
+          
+          // Store team member session in localStorage
+          const sessionData = {
+            id: teamMemberAuth.id,
+            email: teamMemberAuth.email,
+            fullName: teamMemberAuth.fullName,
+            adminUserId: teamMemberAuth.adminUserId,
+          };
+          localStorage.setItem('teamMemberSession', JSON.stringify(sessionData));
           
           setTeamMember(teamMemberAuth);
           setPageAccess(teamMemberAuth.permissions?.pageAccess || []);
@@ -167,7 +247,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       if (teamMember) {
-        // Team member logout - just clear local state
+        // Team member logout - clear local state and localStorage
+        localStorage.removeItem('teamMemberSession');
         setTeamMember(null);
         setPageAccess([]);
         setEffectiveUserId(null);

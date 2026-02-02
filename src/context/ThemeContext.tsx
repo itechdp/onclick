@@ -12,9 +12,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     // Check localStorage first, then system preference
     const saved = localStorage.getItem('darkMode');
     if (saved !== null) {
-      return JSON.parse(saved);
+      const savedValue = JSON.parse(saved);
+      // Apply theme immediately to prevent flash
+      if (savedValue) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      return savedValue;
     }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    // Check system preference
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (systemPrefersDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    return systemPrefersDark;
   });
 
   useEffect(() => {

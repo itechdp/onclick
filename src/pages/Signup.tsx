@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Shield, Mail, Lock, User } from 'lucide-react';
+import { Shield, Mail, Lock, User, Phone } from 'lucide-react';
 import { supabaseAuthService } from '../services/supabaseAuthService';
 import toast from 'react-hot-toast';
 
@@ -11,14 +11,22 @@ export function Signup() {
     password: '',
     confirmPassword: '',
     displayName: '',
+    mobileNumber: '',
   });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.email || !formData.password || !formData.displayName) {
+    if (!formData.email || !formData.password || !formData.displayName || !formData.mobileNumber) {
       toast.error('Please fill in all fields');
+      return;
+    }
+
+    // Validate mobile number format (10 digits)
+    const mobileRegex = /^[0-9]{10}$/;
+    if (!mobileRegex.test(formData.mobileNumber)) {
+      toast.error('Please enter a valid 10-digit mobile number');
       return;
     }
 
@@ -39,6 +47,7 @@ export function Signup() {
         email: formData.email,
         password: formData.password,
         displayName: formData.displayName,
+        mobileNumber: formData.mobileNumber,
         isAdmin: false,
       });
 
@@ -112,6 +121,30 @@ export function Signup() {
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   placeholder="you@example.com"
                   required
+                />
+              </div>
+            </div>
+
+            {/* Mobile Number */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Mobile Number
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="tel"
+                  value={formData.mobileNumber}
+                  onChange={(e) => {
+                    // Only allow numbers and limit to 10 digits
+                    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                    setFormData({ ...formData, mobileNumber: value });
+                  }}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="10-digit mobile number"
+                  required
+                  maxLength={10}
+                  pattern="[0-9]{10}"
                 />
               </div>
             </div>

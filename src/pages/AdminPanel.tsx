@@ -56,6 +56,7 @@ export function AdminPanel() {
         id: userData.id,
         email: userData.email,
         displayName: userData.display_name || 'Unknown User',
+        mobileNumber: userData.mobile_number || '',
         role: (userData.role === 'admin' ? 'admin' : 'user') as 'admin' | 'user',
         isActive: userData.is_active ?? true,
         createdAt: new Date(userData.created_at || Date.now()),
@@ -395,6 +396,7 @@ export function AdminPanel() {
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">User</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Mobile</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Role</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Days Left</th>
@@ -406,13 +408,13 @@ export function AdminPanel() {
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
+                    <td colSpan={8} className="px-6 py-12 text-center">
                       <RefreshCw className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
                     </td>
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={8} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                       No users found
                     </td>
                   </tr>
@@ -427,6 +429,11 @@ export function AdminPanel() {
                           <div>
                             <div className="text-sm font-medium text-gray-900 dark:text-white">{user.displayName}</div>
                             <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900 dark:text-white">
+                            {user.mobileNumber || '-'}
                           </div>
                         </td>
                         <td className="px-6 py-4">

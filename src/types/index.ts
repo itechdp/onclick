@@ -203,6 +203,7 @@ export interface AppUser {
   userId?: string; // Legacy field for backward compatibility
   email: string;
   displayName: string;
+  mobileNumber: string; // Mobile number (required)
   role: 'admin' | 'user';
   isActive: boolean;
   createdAt: Date;
@@ -224,6 +225,8 @@ export interface SupabaseUserData {
   email: string;
   displayName?: string;
   display_name?: string;
+  mobileNumber?: string;
+  mobile_number?: string;
   role: string;
   isActive?: boolean;
   is_active?: boolean;
@@ -255,6 +258,7 @@ export interface SignupCredentials {
   email: string;
   password: string;
   displayName: string;
+  mobileNumber: string; // Mobile number (required)
   isAdmin?: boolean; // For initial admin signup
 }
 

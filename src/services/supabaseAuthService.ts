@@ -46,6 +46,7 @@ export class SupabaseAuthService {
         id: authData.user.id,
         email: credentials.email,
         display_name: credentials.displayName,
+        mobile_number: credentials.mobileNumber,
         role: credentials.isAdmin ? 'admin' : 'user',
         is_active: true,
         created_at: new Date().toISOString(),
@@ -73,13 +74,14 @@ export class SupabaseAuthService {
       // Parse the returned data using the helper method
       const parsedUser = this.parseUserData(profileData);
 
-      // Send user data to webhook via Vite proxy
+      // Send user data directly to n8n webhook
       console.log('🔔 Attempting to send webhook notification...');
       try {
         const webhookData = {
           userId: parsedUser.id,
           email: parsedUser.email,
           displayName: parsedUser.displayName,
+          mobileNumber: parsedUser.mobileNumber,
           role: parsedUser.role,
           subscriptionStatus: parsedUser.subscriptionStatus,
           trialStartDate: parsedUser.trialStartDate,
@@ -90,8 +92,8 @@ export class SupabaseAuthService {
         
         console.log('📤 Webhook payload:', webhookData);
         
-        // Use API route which works in both development and production
-        const response = await fetch('/api/send-webhook', {
+        // Call n8n webhook directly
+        const response = await fetch('https://n8n.srv954870.hstgr.cloud/webhook/7fc9bf52-5516-40ea-8f30-8a7ffd058651', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -104,9 +106,12 @@ export class SupabaseAuthService {
         
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('❌ Webhook failed with status:', response.status, errorText);
+          console.error('❌ Webhook failed with status:', response.status);
+          console.error('❌ Webhook error response:', errorText);
         } else {
+          const successText = await response.text();
           console.log('✅ Webhook notification sent successfully for:', parsedUser.email);
+          console.log('✅ Webhook response:', successText);
         }
       } catch (webhookError) {
         console.error('❌ Failed to send webhook notification:', webhookError);
@@ -331,6 +336,7 @@ export class SupabaseAuthService {
       id: data.id,
       email: data.email,
       displayName: (data.displayName || data.display_name) || 'Unknown User',
+      mobileNumber: (data.mobileNumber || data.mobile_number) || '',
       role: (data.role === 'admin' ? 'admin' : 'user') as 'admin' | 'user',
       isActive: data.isActive ?? data.is_active ?? true,
       createdAt: new Date(data.createdAt || data.created_at || Date.now()),

@@ -12,6 +12,7 @@ CREATE TABLE users (
   id UUID PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   display_name TEXT NOT NULL,
+  mobile_number TEXT,
   role TEXT NOT NULL DEFAULT 'user',
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -37,6 +38,7 @@ CREATE TABLE users (
 
 -- Step 3: Create indexes
 CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_mobile_number ON users(mobile_number);
 CREATE INDEX idx_users_subscription_status ON users(subscription_status);
 CREATE INDEX idx_users_role ON users(role);
 

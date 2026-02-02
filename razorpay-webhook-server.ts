@@ -540,6 +540,48 @@ app.post('/api/verify-payment', async (req, res) => {
 });
 
 /**
+ * N8N Webhook Forwarder - Send user signup data to n8n
+ */
+app.post('/api/send-webhook', async (req, res) => {
+  try {
+    console.log('📨 Received webhook data:', req.body);
+    
+    // Forward to n8n webhook
+    const response = await fetch(
+      'https://n8n.srv954870.hstgr.cloud/webhook/7fc9bf52-5516-40ea-8f30-8a7ffd058651',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(req.body),
+      }
+    );
+
+    const responseText = await response.text();
+    console.log('📥 n8n response status:', response.status);
+    console.log('📥 n8n response:', responseText);
+
+    if (!response.ok) {
+      console.error('❌ n8n webhook failed:', response.status);
+      return res.status(response.status).json({ 
+        success: false, 
+        error: 'n8n webhook failed',
+        details: responseText 
+      });
+    }
+
+    res.json({ success: true, response: responseText });
+  } catch (error) {
+    console.error('❌ Error forwarding to n8n:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+});
+
+/**
  * Health check endpoint
  */
 app.get('/api/health', (req, res) => {

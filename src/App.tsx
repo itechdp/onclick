@@ -27,6 +27,7 @@ import { ClientFolders } from './pages/ClientFolders';
 import { LeadsManagement } from './pages/LeadsManagement';
 import { LeadsDashboard } from './pages/LeadsDashboard';
 import { FollowUpLeads } from './pages/FollowUpLeads';
+import { FeatureRequests } from './pages/FeatureRequests';
 
 function App() {
   return (
@@ -72,6 +73,7 @@ function App() {
                   <Route path="profile" element={<Profile />} />
                   <Route path="support" element={<Support />} />
                   <Route path="tasks" element={<TaskManagement />} />
+                  <Route path="feature-requests" element={<FeatureRequests />} />
                 </Route>
               </Routes>
               <Toaster

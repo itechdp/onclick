@@ -9,6 +9,7 @@ import {
   CheckCircle, XCircle, Clock, Search, RefreshCw, Shield
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { FeatureRequestsManager } from '../components/FeatureRequestsManager';
 
 export function AdminPanel() {
   const { user: currentUser } = useAuth();
@@ -509,7 +510,10 @@ export function AdminPanel() {
             </table>
           </div>
         </div>
-      </div>
+        {/* Feature Requests Section */}
+        <div className="mt-8">
+          <FeatureRequestsManager />
+        </div>      </div>
 
       {/* Action Modal */}
       {showModal && selectedUser && (

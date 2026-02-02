@@ -20,6 +20,7 @@ export const TABLES = {
   DELETED_POLICIES: 'deleted_policies',
   LAPSED_POLICIES: 'lapsed_policies',
   TASKS: 'tasks',
+  FEATURE_REQUESTS: 'feature_requests',
 };
 
 export default supabase;

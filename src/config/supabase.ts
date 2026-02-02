@@ -21,6 +21,7 @@ export const TABLES = {
   LAPSED_POLICIES: 'lapsed_policies',
   TASKS: 'tasks',
   FEATURE_REQUESTS: 'feature_requests',
+  POLICY_SETTINGS: 'policy_settings',
 };
 
 export default supabase;

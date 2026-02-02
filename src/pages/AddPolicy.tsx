@@ -8,67 +8,12 @@ import { FileText, User, Save, ArrowLeft, Upload, Sparkles, ToggleLeft, ToggleRi
 import { getWebhookUrl, debugLog, config } from '../config/webhookConfig';
 import { UpgradeModal } from '../components/UpgradeModal';
 import { storageService } from '../services/storageService';
+import { policySettingsService } from '../services/policySettingsService';
+import { DEFAULT_INSURANCE_COMPANIES, DEFAULT_PRODUCT_TYPES } from '../constants/policyDropdowns';
 import toast from 'react-hot-toast';
 
 // Configuration constants
 const MAX_FILES_LIMIT = 10; // Limit to prevent AI overloading
-
-// Insurance Companies List
-const INSURANCE_COMPANIES = [
-  'Life Insurance Corporation of India',
-  'Axis Max Life Insurance Limited',
-  'HDFC Life Insurance Company Limited',
-  'ICICI Prudential Life Insurance Co. Ltd.',
-  'Kotak Mahindra Life Insurance Co. Ltd.',
-  'IndiaFirst Life Insurance Company Ltd.',
-  'Edelweiss Tokio Life Insurance Company Limited',
-  'Aegon Life Insurance Co. Ltd.',
-  'Aviva Life Insurance Co. India Ltd.',
-  'Bajaj Allianz Life Insurance Co. Ltd.',
-  'Bharti AXA Life Insurance Co. Ltd.',
-  'Canara HSBC Oriental Bank of Commerce Life Insurance Co. Ltd.',
-  'IDBI Federal Life Insurance Company Limited',
-  'PNB MetLife India Insurance Co. Ltd.',
-  'Pramerica Life Insurance Co. Ltd.',
-  'Reliance Nippon Life Insurance Company',
-  'Sahara India Life Insurance Co. Ltd.',
-  'SBI Life Insurance Co. Ltd.',
-  'Shriram Life Insurance Company Ltd.',
-  'Star Union Dai-ichi Life Insurance Co. Ltd.',
-  'Tata AIA Life Insurance Co. Ltd.',
-  'Acko General Insurance Ltd.',
-  'Agriculture Insurance Company of India Ltd.',
-  'Bajaj Allianz General Insurance Co. Ltd.',
-  'Cholamandalam MS General Insurance Co. Ltd.',
-  'ECGC Ltd. (formerly Export Credit Guarantee Corp.)',
-  'Future Generali India Insurance Co. Ltd.',
-  'Go Digit General Insurance Ltd.',
-  'HDFC ERGO General Insurance Co. Ltd.',
-  'ICICI Lombard General Insurance Co. Ltd.',
-  'IFFCO-TOKIO General Insurance Co. Ltd.',
-  'National Insurance Company Ltd.',
-  'New India Assurance Co. Ltd.',
-  'Reliance General Insurance Co. Ltd.',
-  'Royal Sundaram General Insurance Co. Ltd.',
-  'SBI General Insurance Co. Ltd.',
-  'Tata AIG General Insurance Co. Ltd.',
-  'United India Insurance Company Ltd.',
-  'Universal Sompo General Insurance Co. Ltd.',
-  'Liberty General Insurance Ltd.',
-  'Magma HDI General Insurance Co. Ltd.',
-  'Magma General Insurance',
-  'Raheja QBE General Insurance Co. Ltd.',
-  'Shriram General Insurance Co. Ltd.',
-  'Navi General Insurance Ltd.',
-  'Zuno General Insurance Ltd. (formerly Edelweiss General)',
-  'Kotak Mahindra General Insurance Co. Ltd.',
-  'Aditya Birla Health Insurance Co. Ltd.',
-  'Care Health Insurance Ltd. (formerly Religare Health)',
-  'Galaxy Health Insurance Company Limited (formerly Galaxy Health & Allied)',
-  'Narayana Health Insurance Ltd.',
-  'Manipal Cigna Health Insurance Company Limited',
-  'Niva Bupa Health Insurance Co. Ltd.',
-];
 
 export function AddPolicy() {
   const navigate = useNavigate();
@@ -148,6 +93,46 @@ export function AddPolicy() {
   // Upgrade modal state
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
+  // Dynamic dropdown options from policy_settings
+  const [insuranceCompanies, setInsuranceCompanies] = useState<string[]>([]);
+  const [productTypes, setProductTypes] = useState<string[]>([]);
+  const [isLoadingDropdowns, setIsLoadingDropdowns] = useState(true);
+
+  // Fetch dropdown options from policy_settings
+  useEffect(() => {
+    const fetchDropdownOptions = async () => {
+      try {
+        setIsLoadingDropdowns(true);
+        const settingsGrouped = await policySettingsService.getAllSettings();
+        
+        // Extract insurance companies from grouped settings
+        const companies = settingsGrouped.insurance_company?.map(s => s.value) || [];
+        
+        // Extract product types from grouped settings
+        const products = settingsGrouped.product_type?.map(s => s.value) || [];
+        
+        // Use custom settings if they exist, otherwise use defaults
+        // This ensures new users see defaults, but customizations take priority
+        setInsuranceCompanies(companies.length > 0 ? companies : DEFAULT_INSURANCE_COMPANIES);
+        setProductTypes(products.length > 0 ? products : DEFAULT_PRODUCT_TYPES);
+        
+        console.log('📋 Loaded dropdown options:', {
+          insuranceCompanies: companies.length > 0 ? `${companies.length} custom` : 'using defaults',
+          productTypes: products.length > 0 ? `${products.length} custom` : 'using defaults'
+        });
+      } catch (error) {
+        console.error('Error fetching dropdown options:', error);
+        // Always fall back to defaults on error so users can still use the form
+        setInsuranceCompanies(DEFAULT_INSURANCE_COMPANIES);
+        setProductTypes(DEFAULT_PRODUCT_TYPES);
+      } finally {
+        setIsLoadingDropdowns(false);
+      }
+    };
+
+    fetchDropdownOptions();
+  }, []);
+
   // Fetch group heads on component mount
   useEffect(() => {
     const fetchGroupHeads = async () => {
@@ -211,91 +196,6 @@ export function AddPolicy() {
       // This will trigger a re-render
     }
   }, [formData.policyholderName]);
-
-  // All Product Types - Flat list for searchable autocomplete
-  const PRODUCT_TYPES = [
-    'Term Insurance',
-    'Whole Life Insurance',
-    'Endowment Plan',
-    'Money Back Policy',
-    'Unit Linked Insurance Plan (ULIP)',
-    'Child Education Plan',
-    'Child Marriage Plan',
-    'Retirement Plan',
-    'Pension Plan',
-    'Annuity Plan',
-    'Guaranteed Return Plan',
-    'Savings Insurance Plan',
-    'Investment Linked Insurance Plan',
-    'Group Life Insurance',
-    'Credit Life Insurance',
-    'Loan Protection Insurance',
-    'Micro Insurance',
-    'Keyman Insurance',
-    'Individual Health Insurance',
-    'Family Floater Health Insurance',
-    'Senior Citizen Health Insurance',
-    'Group Health Insurance',
-    'Critical Illness Insurance',
-    'Top-Up Health Insurance',
-    'Super Top-Up Health Insurance',
-    'Hospital Cash Plan',
-    'OPD Insurance',
-    'Maternity Insurance',
-    'Personal Accident Insurance',
-    'Disability Insurance',
-    'Two-Wheeler Insurance',
-    'Private Car Insurance',
-    'Commercial Vehicle Insurance',
-    'Third Party Motor Insurance',
-    'Comprehensive Motor Insurance',
-    'Standalone Own Damage Motor Insurance',
-    'Home Insurance',
-    'House Structure Insurance',
-    'Home Contents Insurance',
-    'Rented Home Insurance',
-    'Fire Insurance',
-    'Property Insurance',
-    'Factory Insurance',
-    'Shop Insurance',
-    'Office Insurance',
-    'Warehouse Insurance',
-    'Travel Insurance',
-    'Domestic Travel Insurance',
-    'International Travel Insurance',
-    'Student Travel Insurance',
-    'Senior Citizen Travel Insurance',
-    'Corporate Travel Insurance',
-    'Marine Cargo Insurance',
-    'Marine Hull Insurance',
-    'Export Import Insurance',
-    'Business Insurance',
-    'SME Insurance',
-    'Shopkeeper Insurance',
-    'Startup Insurance',
-    'Professional Indemnity Insurance',
-    'Cyber Insurance',
-    'Directors & Officers (D&O) Insurance',
-    'Public Liability Insurance',
-    'Product Liability Insurance',
-    'Workmen Compensation Insurance',
-    'Employee Insurance',
-    'Crop Insurance',
-    'Weather Insurance',
-    'Livestock Insurance',
-    'Poultry Insurance',
-    'Gadget Insurance',
-    'Mobile Insurance',
-    'Laptop Insurance',
-    'Electronics Insurance',
-    'Pet Insurance',
-    'Event Insurance',
-    'Wedding Insurance',
-    'Fidelity Guarantee Insurance',
-    'Engineering Insurance',
-    'Contractor All Risk Insurance',
-    'Erection All Risk Insurance',
-  ];
 
   // Enhanced adaptive auto-fill function for any PDF format
   // This function can handle various insurance companies and policy formats
@@ -1423,7 +1323,7 @@ export function AddPolicy() {
       
       // Filter insurance companies based on input
       if (value.trim()) {
-        const filtered = INSURANCE_COMPANIES.filter(company =>
+        const filtered = insuranceCompanies.filter(company =>
           company.toLowerCase().includes(value.toLowerCase())
         );
         setFilteredInsuranceCompanies(filtered);
@@ -1539,7 +1439,7 @@ export function AddPolicy() {
     
     // Filter product types based on input
     if (value.trim()) {
-      const filtered = PRODUCT_TYPES.filter(type =>
+      const filtered = productTypes.filter(type =>
         type.toLowerCase().includes(value.toLowerCase())
       );
       setFilteredProductTypes(filtered);
@@ -1910,13 +1810,13 @@ export function AddPolicy() {
                   onChange={handleProductTypeChange}
                   onFocus={() => {
                     if (productType.trim()) {
-                      const filtered = PRODUCT_TYPES.filter(type =>
+                      const filtered = productTypes.filter(type =>
                         type.toLowerCase().includes(productType.toLowerCase())
                       );
                       setFilteredProductTypes(filtered);
                       setShowProductTypeDropdown(filtered.length > 0);
                     } else {
-                      setFilteredProductTypes(PRODUCT_TYPES);
+                      setFilteredProductTypes(productTypes);
                       setShowProductTypeDropdown(true);
                     }
                   }}
@@ -2005,7 +1905,7 @@ export function AddPolicy() {
                         onChange={handleInputChange}
                         onFocus={() => {
                           if (formData.insuranceCompany.trim()) {
-                            const filtered = INSURANCE_COMPANIES.filter(company =>
+                            const filtered = insuranceCompanies.filter(company =>
                               company.toLowerCase().includes(formData.insuranceCompany.toLowerCase())
                             );
                             setFilteredInsuranceCompanies(filtered);

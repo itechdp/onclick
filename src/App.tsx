@@ -28,6 +28,7 @@ import { LeadsManagement } from './pages/LeadsManagement';
 import { LeadsDashboard } from './pages/LeadsDashboard';
 import { FollowUpLeads } from './pages/FollowUpLeads';
 import { FeatureRequests } from './pages/FeatureRequests';
+import { Settings } from './pages/Settings';
 
 function App() {
   return (
@@ -74,6 +75,7 @@ function App() {
                   <Route path="support" element={<Support />} />
                   <Route path="tasks" element={<TaskManagement />} />
                   <Route path="feature-requests" element={<FeatureRequests />} />
+                  <Route path="settings" element={<Settings />} />
                 </Route>
               </Routes>
               <Toaster

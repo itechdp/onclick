@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Plus, Bell, User, LogOut, Moon, Sun, Menu, X, Home, FileText, CheckSquare, Clock, XCircle, DollarSign, Activity, RotateCcw, HelpCircle, Percent, Users, Crown, UserCircle, FolderOpen, UserPlus, UsersRound, Lightbulb } from 'lucide-react';
+import { Plus, Bell, User, LogOut, Moon, Sun, Menu, X, Home, FileText, CheckSquare, Clock, XCircle, DollarSign, Activity, RotateCcw, HelpCircle, Percent, Users, Crown, UserCircle, FolderOpen, UserPlus, UsersRound, Lightbulb, Settings as SettingsIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import toast from 'react-hot-toast';
@@ -42,6 +42,7 @@ export function Sidebar() {
     { path: '/activity-log', label: 'Activity Log', icon: Activity },
     { path: '/restore', label: 'Restore', icon: RotateCcw },
     { path: '/profile', label: 'Profile', icon: UserCircle },
+    { path: '/settings', label: 'Settings', icon: SettingsIcon },
     { path: '/feature-requests', label: 'Feature Requests', icon: Lightbulb },
     { path: '/support', label: 'Support', icon: HelpCircle },
     ...(user?.role === 'admin' ? [{ path: '/admin', label: 'Admin Panel', icon: Users }] : []),

@@ -45,9 +45,22 @@ export function Reminders() {
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [policyForNotes, setPolicyForNotes] = useState<Policy | null>(null);
   const [notes, setNotes] = useState('');
-  const [printFilter, setPrintFilter] = useState<'all' | 'individual' | 'group'>('all');
   const [groupHeads, setGroupHeads] = useState<any[]>([]);
-  const [showPrintModal, setShowPrintModal] = useState(false);
+  
+  // Filter states
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCompany, setSelectedCompany] = useState<string>('all');
+  const [selectedPolicyType, setSelectedPolicyType] = useState<string>('all');
+  const [selectedUrgency, setSelectedUrgency] = useState<string>('all');
+  const [selectedGroupHead, setSelectedGroupHead] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'individual' | 'group'>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [minPremium, setMinPremium] = useState<string>('');
+  const [maxPremium, setMaxPremium] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   
   // Fetch group heads
   useEffect(() => {
@@ -69,15 +82,139 @@ export function Reminders() {
   }, []);
   
   const handlePrint = () => {
-    setShowPrintModal(true);
-  };
-  
-  const handlePrintWithFilter = (filter: 'all' | 'individual' | 'group') => {
-    setPrintFilter(filter);
-    setShowPrintModal(false);
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Please allow popups to print');
+      return;
+    }
+
+    // Generate table HTML from filtered policies
+    const tableRows = filteredPolicies.map(policy => `
+      <tr>
+        <td>${policy.policyholderName}</td>
+        <td>${policy.contactNo || '-'}</td>
+        <td>${policy.policyNumber}</td>
+        <td>${policy.policyType}</td>
+        <td>${policy.insuranceCompany}</td>
+        <td>${safeFormatDate(policy.policyEndDate, 'dd/MM/yyyy')}</td>
+        <td>${policy.daysRemaining}</td>
+        <td>${(policy.premiumAmount || 0).toLocaleString('en-IN')}</td>
+        <td>${policy.referenceFromName || '-'}</td>
+        <td>${policy.memberOf ? getGroupHeadName(policy.memberOf) || 'N/A' : '-'}</td>
+      </tr>
+    `).join('');
+
+    const currentDate = new Date().toLocaleDateString('en-IN', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
+    // Write complete HTML document
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Policy Reminders</title>
+        <style>
+          @page { size: A4 landscape; margin: 15mm; }
+          body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+          .header { text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px solid #2563eb; }
+          .header h1 { 
+            margin: 0; 
+            font-size: 24px; 
+            font-weight: bold; 
+            color: #1e40af;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+          }
+          .header p { 
+            margin: 8px 0 0 0; 
+            font-size: 16px; 
+            font-weight: 700; 
+            color: #1f2937;
+            text-transform: uppercase;
+          }
+          .header .date { 
+            font-size: 11px; 
+            color: #6b7280; 
+            margin-top: 8px; 
+            font-weight: normal;
+          }
+          .header .count { 
+            font-size: 13px; 
+            color: #dc2626; 
+            margin-top: 5px; 
+            font-weight: bold; 
+          }
+          table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 9px; 
+            margin-top: 15px; 
+          }
+          th { 
+            background-color: #1e3a8a; 
+            color: #000000; 
+            padding: 8px 5px; 
+            border: 1px solid #1e3a8a; 
+            font-weight: bold; 
+            text-align: left; 
+            font-size: 10px;
+            text-transform: uppercase;
+          }
+          td { 
+            padding: 5px; 
+            border: 1px solid #9ca3af; 
+            color: #000;
+          }
+          tbody tr:nth-child(even) { 
+            background-color: #f3f4f6; 
+          }
+          tbody tr:nth-child(odd) { 
+            background-color: #ffffff; 
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>On Clicks.in</h1>
+          <p>Policy Expiry Reminders</p>
+          <div class="date">Generated on: ${currentDate}</div>
+          <div class="count">Total Policies: ${filteredPolicies.length}</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Policyholder</th>
+              <th>Contact</th>
+              <th>Policy #</th>
+              <th>Type</th>
+              <th>Company</th>
+              <th>Expires</th>
+              <th>Days Left</th>
+              <th>Premium (₹)</th>
+              <th>Reference</th>
+              <th>Group Head</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Print after a short delay to ensure content is loaded
     setTimeout(() => {
-      window.print();
-    }, 100);
+      printWindow.print();
+      printWindow.close();
+    }, 250);
   };
   
   const getGroupHeadName = (memberId: string) => {
@@ -175,6 +312,102 @@ export function Reminders() {
       }))
       .sort((a, b) => a.daysRemaining - b.daysRemaining);
   }, [policies]);
+
+  // Get unique values for filters
+  const uniqueCompanies = useMemo(() => {
+    const companies = new Set(expiringPolicies.map(p => p.insuranceCompany).filter(Boolean));
+    return Array.from(companies).sort();
+  }, [expiringPolicies]);
+
+  const uniquePolicyTypes = useMemo(() => {
+    const types = new Set(expiringPolicies.map(p => p.policyType).filter(Boolean));
+    return Array.from(types).sort();
+  }, [expiringPolicies]);
+
+  // Apply all filters to expiring policies
+  const filteredPolicies = useMemo(() => {
+    return expiringPolicies.filter(policy => {
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch = 
+          policy.policyholderName?.toLowerCase().includes(query) ||
+          policy.policyNumber?.toLowerCase().includes(query) ||
+          policy.insuranceCompany?.toLowerCase().includes(query) ||
+          policy.contactNo?.includes(query) ||
+          policy.referenceFromName?.toLowerCase().includes(query);
+        if (!matchesSearch) return false;
+      }
+
+      // Insurance Company filter
+      if (selectedCompany !== 'all' && policy.insuranceCompany !== selectedCompany) {
+        return false;
+      }
+
+      // Policy Type filter
+      if (selectedPolicyType !== 'all' && policy.policyType !== selectedPolicyType) {
+        return false;
+      }
+
+      // Urgency filter
+      if (selectedUrgency !== 'all') {
+        const daysLeft = policy.daysRemaining;
+        if (selectedUrgency === 'critical' && daysLeft > 7) return false;
+        if (selectedUrgency === 'warning' && (daysLeft <= 7 || daysLeft > 15)) return false;
+        if (selectedUrgency === 'normal' && daysLeft <= 15) return false;
+      }
+
+      // Group Head filter
+      if (selectedGroupHead !== 'all') {
+        if (selectedGroupHead === 'none') {
+          if (policy.memberOf) return false;
+        } else if (policy.memberOf !== selectedGroupHead) {
+          return false;
+        }
+      }
+
+      // Category filter
+      if (selectedCategory !== 'all') {
+        if (selectedCategory === 'individual' && policy.memberOf) return false;
+        if (selectedCategory === 'group' && !policy.memberOf) return false;
+      }
+
+      // Premium range filter
+      const premium = policy.premiumAmount || 0;
+      if (minPremium && premium < parseFloat(minPremium)) return false;
+      if (maxPremium && premium > parseFloat(maxPremium)) return false;
+
+      // Month and Year filter (priority over date range)
+      if (selectedMonth !== 'all' || selectedYear !== 'all') {
+        const expiryDate = policy.policyEndDate ? new Date(policy.policyEndDate) : null;
+        if (!expiryDate) return false;
+        
+        if (selectedMonth !== 'all') {
+          const policyMonth = expiryDate.getMonth();
+          if (policyMonth !== parseInt(selectedMonth)) return false;
+        }
+        if (selectedYear !== 'all') {
+          const policyYear = expiryDate.getFullYear();
+          if (policyYear !== parseInt(selectedYear)) return false;
+        }
+      } else if (startDate || endDate) {
+        // Date range filter (only if month/year not selected)
+        const expiryDate = policy.policyEndDate ? new Date(policy.policyEndDate) : null;
+        if (!expiryDate) return false;
+        
+        if (startDate) {
+          const start = new Date(startDate);
+          if (expiryDate < start) return false;
+        }
+        if (endDate) {
+          const end = new Date(endDate);
+          if (expiryDate > end) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [expiringPolicies, searchQuery, selectedCompany, selectedPolicyType, selectedUrgency, selectedGroupHead, selectedCategory, selectedMonth, selectedYear, minPremium, maxPremium, startDate, endDate]);
 
   const generateReminderMessage = (policy: Policy, daysRemaining: number) => {
     return `🔔 *Policy Renewal Reminder*
@@ -435,19 +668,9 @@ Thank you!`;
     );
   };
 
-  const criticalCount = expiringPolicies.filter(p => p.daysRemaining <= 7).length;
-  const warningCount = expiringPolicies.filter(p => p.daysRemaining > 7 && p.daysRemaining <= 14).length;
-  const totalUpcoming = expiringPolicies.length;
-  
-  // Filter policies based on print filter
-  const filteredPolicies = useMemo(() => {
-    if (printFilter === 'individual') {
-      return expiringPolicies.filter(p => !p.memberOf);
-    } else if (printFilter === 'group') {
-      return expiringPolicies.filter(p => p.memberOf);
-    }
-    return expiringPolicies;
-  }, [expiringPolicies, printFilter]);
+  const criticalCount = filteredPolicies.filter(p => p.daysRemaining <= 7).length;
+  const warningCount = filteredPolicies.filter(p => p.daysRemaining > 7 && p.daysRemaining <= 14).length;
+  const totalUpcoming = filteredPolicies.length;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 transition-colors duration-200">
@@ -459,6 +682,22 @@ Thank you!`;
               <p className="text-gray-600 dark:text-gray-300 mt-2">Stay on top of upcoming policy renewals</p>
             </div>
             <div className="mt-4 sm:mt-0 flex gap-2">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-sharp shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                Filter Policies
+                {(searchQuery || selectedCompany !== 'all' || selectedPolicyType !== 'all' || selectedUrgency !== 'all' || 
+                  selectedGroupHead !== 'all' || selectedCategory !== 'all' || selectedMonth !== 'all' || selectedYear !== 'all' || 
+                  minPremium || maxPremium || startDate || endDate) && (
+                  <span className="ml-2 px-2 py-0.5 text-xs font-bold bg-white text-blue-600 rounded-full">
+                    {filteredPolicies.length}
+                  </span>
+                )}
+              </button>
               <Link 
                 to="/lapsed-policies" 
                 className="inline-flex items-center px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-sharp shadow transition-colors duration-200"
@@ -513,201 +752,351 @@ Thank you!`;
 
         {/* Main Content - Only show when not loading */}
         {!loading && (
-        <>
-        {/* Printable Section - Only this will print */}
-        <div className="printable-reminders hidden print:block">
-          <div className="text-center mb-4">
-            <h1 className="text-xl font-bold text-gray-900">Policy Expiry Reminders</h1>
-            <p className="text-sm text-gray-600">
-              Generated on {new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
-            <p className="text-sm text-gray-600 mt-1">
-              Filter: {printFilter === 'all' ? 'All Policies' : printFilter === 'individual' ? 'Individual Policies Only' : 'Group Head Policies Only'}
-            </p>
-            {printFilter === 'group' && filteredPolicies.length > 0 && (
-              <p className="text-sm font-semibold text-gray-800 mt-1">
-                Group Head: {getGroupHeadName(filteredPolicies[0].memberOf!)}
-              </p>
-            )}
-          </div>
-          
-          {/* Print Table */}
-          {filteredPolicies.length > 0 && (
-            <table className="w-full border-collapse">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="border border-gray-800 px-2 py-1 text-xs font-bold text-black text-left">Policyholder</th>
-                  <th className="border border-gray-800 px-2 py-1 text-xs font-bold text-black text-left">Policy #</th>
-                  <th className="border border-gray-800 px-2 py-1 text-xs font-bold text-black text-left">Type</th>
-                  <th className="border border-gray-800 px-2 py-1 text-xs font-bold text-black text-left">Company</th>
-                  <th className="border border-gray-800 px-2 py-1 text-xs font-bold text-black text-left">Expires</th>
-                  <th className="border border-gray-800 px-2 py-1 text-xs font-bold text-black text-left">Days Left</th>
-                  <th className="border border-gray-800 px-2 py-1 text-xs font-bold text-black text-right">Premium</th>
-                  <th className="border border-gray-800 px-2 py-1 text-xs font-bold text-black text-left">Group Head</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPolicies.map((policy) => (
-                  <tr key={policy.id}>
-                    <td className="border border-gray-400 px-2 py-1 text-xs text-black">{policy.policyholderName}</td>
-                    <td className="border border-gray-400 px-2 py-1 text-xs text-black">{policy.policyNumber}</td>
-                    <td className="border border-gray-400 px-2 py-1 text-xs text-black">{policy.policyType}</td>
-                    <td className="border border-gray-400 px-2 py-1 text-xs text-black">{policy.insuranceCompany}</td>
-                    <td className="border border-gray-400 px-2 py-1 text-xs text-black">{safeFormatDate(policy.policyEndDate, 'dd/MM/yyyy')}</td>
-                    <td className="border border-gray-400 px-2 py-1 text-xs text-black">{policy.daysRemaining}</td>
-                    <td className="border border-gray-400 px-2 py-1 text-xs text-black text-right">₹{(policy.premiumAmount || 0).toLocaleString('en-IN')}</td>
-                    <td className="border border-gray-400 px-2 py-1 text-xs text-black">{policy.memberOf ? getGroupHeadName(policy.memberOf) || 'N/A' : '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-        
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 no-print">
-          <SummaryCard
-            title="Critical (≤7 days)"
-            count={criticalCount}
-            icon={AlertTriangle}
-            color="red"
-            borderColor="border-red-600"
-          />
-          <SummaryCard
-            title="Warning (8-14 days)"
-            count={warningCount}
-            icon={Clock}
-            color="yellow"
-            borderColor="border-amber-600"
-          />
-          <SummaryCard
-            title="Upcoming (≤30 days)"
-            count={totalUpcoming}
-            icon={Calendar}
-            color="blue"
-            borderColor="border-blue-600"
-          />
-        </div>
+          <>
+            {/* Comprehensive Filters Section */}
+            {showFilters && (
+              <div className="bg-white dark:bg-gray-800 rounded-sharp shadow-sm mb-8 no-print border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Search Filter */}
+                    <div className="lg:col-span-3">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Search
+                      </label>
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search by name, policy number, company, contact, or reference..."
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-sharp bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
 
-        {/* Policies List */}
-        <div className="bg-white dark:bg-gray-800 rounded-sharp shadow-sm transition-colors duration-200 print:shadow-none">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 no-print">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Policies Expiring Soon</h2>
-            <p className="text-gray-600 dark:text-gray-300">
-              {printFilter === 'all' ? 'Policies expiring in the next 30 days' :
-               printFilter === 'individual' ? 'Individual policies expiring in the next 30 days' :
-               'Group head policies expiring in the next 30 days'}
-            </p>
-          </div>
+                    {/* Month Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        📅 Expiry Month
+                      </label>
+                      <select
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-sharp bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="all">All Months</option>
+                        <option value="0">January</option>
+                        <option value="1">February</option>
+                        <option value="2">March</option>
+                        <option value="3">April</option>
+                        <option value="4">May</option>
+                        <option value="5">June</option>
+                        <option value="6">July</option>
+                        <option value="7">August</option>
+                        <option value="8">September</option>
+                        <option value="9">October</option>
+                        <option value="10">November</option>
+                        <option value="11">December</option>
+                      </select>
+                    </div>
 
-          <div className="p-6 no-print">
-            {filteredPolicies.length > 0 ? (
-              <div className="space-y-4">
-                {filteredPolicies.map((policy) => (
-                  <PolicyCard
-                    key={policy.id}
-                    policy={policy}
-                    daysRemaining={policy.daysRemaining}
-                  />
-                ))}
+                    {/* Year Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        📆 Expiry Year
+                      </label>
+                      <select
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-sharp bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="all">All Years</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                        <option value="2028">2028</option>
+                        <option value="2029">2029</option>
+                        <option value="2030">2030</option>
+                      </select>
+                    </div>
+
+                    {/* Category Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Category
+                      </label>
+                      <select
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value as 'all' | 'individual' | 'group')}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-sharp bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="all">All Categories</option>
+                        <option value="individual">Individual Policies</option>
+                        <option value="group">Group Policies</option>
+                      </select>
+                    </div>
+
+                    {/* Insurance Company Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Insurance Company
+                      </label>
+                      <select
+                        value={selectedCompany}
+                        onChange={(e) => setSelectedCompany(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-sharp bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="all">All Companies</option>
+                        {uniqueCompanies.map(company => (
+                          <option key={company} value={company}>{company}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Policy Type Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Policy Type
+                      </label>
+                      <select
+                        value={selectedPolicyType}
+                        onChange={(e) => setSelectedPolicyType(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-sharp bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="all">All Types</option>
+                        {uniquePolicyTypes.map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Group Head Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Group Head
+                      </label>
+                      <select
+                        value={selectedGroupHead}
+                        onChange={(e) => setSelectedGroupHead(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-sharp bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="all">All Group Heads</option>
+                        <option value="none">No Group Head</option>
+                        {groupHeads.map(gh => (
+                          <option key={gh.id} value={gh.id}>{gh.group_head_name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Urgency Level Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Urgency Level
+                      </label>
+                      <select
+                        value={selectedUrgency}
+                        onChange={(e) => setSelectedUrgency(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-sharp bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="all">All Urgencies</option>
+                        <option value="critical">🔴 Critical (≤7 days)</option>
+                        <option value="warning">🟡 Warning (8-15 days)</option>
+                        <option value="normal">🟢 Normal (16-30 days)</option>
+                      </select>
+                    </div>
+
+                    {/* Premium Range Filters */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Min Premium (₹)
+                      </label>
+                      <input
+                        type="number"
+                        value={minPremium}
+                        onChange={(e) => setMinPremium(e.target.value)}
+                        placeholder="Min amount"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-sharp bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Max Premium (₹)
+                      </label>
+                      <input
+                        type="number"
+                        value={maxPremium}
+                        onChange={(e) => setMaxPremium(e.target.value)}
+                        placeholder="Max amount"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-sharp bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* Date Range Filters */}
+                    <div className="lg:col-span-3 border-t border-gray-200 dark:border-gray-600 pt-4 mt-2">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                        💡 Use Month/Year filters above for quick selection, or use custom date range below
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Custom Start Date
+                          </label>
+                          <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => {
+                              setStartDate(e.target.value);
+                              if (e.target.value) {
+                                setSelectedMonth('all');
+                                setSelectedYear('all');
+                              }
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-sharp bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Custom End Date
+                          </label>
+                          <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => {
+                              setEndDate(e.target.value);
+                              if (e.target.value) {
+                                setSelectedMonth('all');
+                                setSelectedYear('all');
+                              }
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-sharp bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Clear All Filters Button */}
+                  {(searchQuery || selectedCompany !== 'all' || selectedPolicyType !== 'all' || selectedUrgency !== 'all' || 
+                    selectedGroupHead !== 'all' || selectedCategory !== 'all' || selectedMonth !== 'all' || selectedYear !== 'all' || 
+                    minPremium || maxPremium || startDate || endDate) && (
+                    <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <span className="font-medium text-gray-900 dark:text-white">Results:</span>{' '}
+                        Showing <span className="font-semibold text-blue-600 dark:text-blue-400">{filteredPolicies.length}</span> of{' '}
+                        <span className="font-semibold">{expiringPolicies.length}</span> policies
+                      </p>
+                      <button
+                        onClick={() => {
+                          setSearchQuery('');
+                          setSelectedCompany('all');
+                          setSelectedPolicyType('all');
+                          setSelectedUrgency('all');
+                          setSelectedGroupHead('all');
+                          setSelectedCategory('all');
+                          setSelectedMonth('all');
+                          setSelectedYear('all');
+                          setMinPremium('');
+                          setMaxPremium('');
+                          setStartDate('');
+                          setEndDate('');
+                        }}
+                        className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-sharp transition-colors duration-200"
+                      >
+                        Clear All Filters
+                      </button>
+                    </div>
+                  )}
               </div>
-            ) : (
-              <div className="text-center py-12">
-                <Calendar className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-                <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">No Upcoming Renewals</h3>
-                <p className="mt-2 text-gray-500 dark:text-gray-400">
-                  Great! No policies are expiring in the next 30 days.
+            )}
+            
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 no-print">
+              <SummaryCard
+                title="Critical (≤7 days)"
+                count={criticalCount}
+                icon={AlertTriangle}
+                color="red"
+                borderColor="border-red-600"
+              />
+              <SummaryCard
+                title="Warning (8-14 days)"
+                count={warningCount}
+                icon={Clock}
+                color="yellow"
+                borderColor="border-amber-600"
+              />
+              <SummaryCard
+                title="Upcoming (≤30 days)"
+                count={totalUpcoming}
+                icon={Calendar}
+                color="blue"
+                borderColor="border-blue-600"
+              />
+            </div>
+
+            {/* Policies List */}
+            <div className="bg-white dark:bg-gray-800 rounded-sharp shadow-sm transition-colors duration-200 print:shadow-none">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 no-print">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Policies Expiring Soon</h2>
+                <p className="text-gray-600 dark:text-gray-300">
+                  Policies expiring in the next 30 days
                 </p>
               </div>
+
+              <div className="p-6 no-print">
+                {filteredPolicies.length > 0 ? (
+                  <div className="space-y-4">
+                    {filteredPolicies.map((policy) => (
+                      <PolicyCard
+                        key={policy.id}
+                        policy={policy}
+                        daysRemaining={policy.daysRemaining}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Calendar className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+                    <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">No Upcoming Renewals</h3>
+                    <p className="mt-2 text-gray-500 dark:text-gray-400">
+                      Great! No policies are expiring in the next 30 days.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action Items */}
+            {expiringPolicies.length > 0 && (
+              <div className="mt-8 bg-white dark:bg-gray-800 rounded-sharp shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recommended Actions</h3>
+                <div className="space-y-3">
+                  {criticalCount > 0 && (
+                    <div className="flex items-center p-3 bg-red-50 rounded-sharp">
+                      <AlertTriangle className="h-5 w-5 text-red-500 mr-3" />
+                      <span className="text-red-800">
+                        <strong>Urgent:</strong> {criticalCount} {criticalCount === 1 ? 'policy expires' : 'policies expire'} within 7 days. Contact your insurance agent immediately.
+                      </span>
+                    </div>
+                  )}
+                  {warningCount > 0 && (
+                    <div className="flex items-center p-3 bg-yellow-50 rounded-sharp">
+                      <Clock className="h-5 w-5 text-yellow-500 mr-3" />
+                      <span className="text-yellow-800">
+                        <strong>Action needed:</strong> {warningCount} {warningCount === 1 ? 'policy expires' : 'policies expire'} in 8-14 days. Start the renewal process.
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center p-3 bg-blue-50 rounded-sharp">
+                    <Calendar className="h-5 w-5 text-blue-500 mr-3" />
+                    <span className="text-blue-800">
+                      Set up automatic renewal reminders to avoid missing future deadlines.
+                    </span>
+                  </div>
+                </div>
+              </div>
             )}
-          </div>
-        </div>
-
-        {/* Action Items */}
-        {expiringPolicies.length > 0 && (
-          <div className="mt-8 bg-white dark:bg-gray-800 rounded-sharp shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recommended Actions</h3>
-            <div className="space-y-3">
-              {criticalCount > 0 && (
-                <div className="flex items-center p-3 bg-red-50 rounded-sharp">
-                  <AlertTriangle className="h-5 w-5 text-red-500 mr-3" />
-                  <span className="text-red-800">
-                    <strong>Urgent:</strong> {criticalCount} {criticalCount === 1 ? 'policy expires' : 'policies expire'} within 7 days. Contact your insurance agent immediately.
-                  </span>
-                </div>
-              )}
-              {warningCount > 0 && (
-                <div className="flex items-center p-3 bg-yellow-50 rounded-sharp">
-                  <Clock className="h-5 w-5 text-yellow-500 mr-3" />
-                  <span className="text-yellow-800">
-                    <strong>Action needed:</strong> {warningCount} {warningCount === 1 ? 'policy expires' : 'policies expire'} in 8-14 days. Start the renewal process.
-                  </span>
-                </div>
-              )}
-              <div className="flex items-center p-3 bg-blue-50 rounded-sharp">
-                <Calendar className="h-5 w-5 text-blue-500 mr-3" />
-                <span className="text-blue-800">
-                  Set up automatic renewal reminders to avoid missing future deadlines.
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-        </>
-        )}
-
-        {/* Print Filter Modal */}
-        {showPrintModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 no-print">
-            <div className="bg-white dark:bg-gray-800 rounded-card p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200 dark:border-gray-700">
-              <div className="mb-4">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
-                  <Printer className="h-5 w-5 mr-2 text-blue-600" />
-                  Select Print Filter
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Choose which policies to include in the print
-                </p>
-              </div>
-              
-              <div className="space-y-3">
-                <button
-                  onClick={() => handlePrintWithFilter('all')}
-                  className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-sharp font-medium transition-colors flex items-center justify-between"
-                >
-                  <span>Mix Print (All Policies)</span>
-                  <span className="text-sm bg-blue-500 px-2 py-1 rounded">{expiringPolicies.length}</span>
-                </button>
-                
-                <button
-                  onClick={() => handlePrintWithFilter('individual')}
-                  className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-sharp font-medium transition-colors flex items-center justify-between"
-                >
-                  <span>Only Individual Policies</span>
-                  <span className="text-sm bg-green-500 px-2 py-1 rounded">
-                    {expiringPolicies.filter(p => !p.member_of).length}
-                  </span>
-                </button>
-                
-                <button
-                  onClick={() => handlePrintWithFilter('group')}
-                  className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-sharp font-medium transition-colors flex items-center justify-between"
-                >
-                  <span>Only Group Head Policies</span>
-                  <span className="text-sm bg-purple-500 px-2 py-1 rounded">
-                    {expiringPolicies.filter(p => p.member_of).length}
-                  </span>
-                </button>
-                
-                <button
-                  onClick={() => setShowPrintModal(false)}
-                  className="w-full px-4 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-sharp font-medium transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
+          </>
         )}
 
         {/* Reminder Modal */}
@@ -1054,102 +1443,6 @@ Thank you!`;
           </div>
         )}
       </div>
-      
-      {/* Print Styles */}
-      <style>{`
-        @media print {
-          @page {
-            margin: 0.8cm 0.5cm;
-            size: A4 landscape;
-          }
-          
-          /* Hide everything on the page */
-          body * {
-            visibility: hidden !important;
-          }
-          
-          /* Only show the printable section */
-          .printable-reminders,
-          .printable-reminders * {
-            visibility: visible !important;
-          }
-          
-          /* Position printable section at top of page */
-          .printable-reminders {
-            position: fixed !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            max-height: 100vh !important;
-            overflow: hidden !important;
-            background: white !important;
-            padding: 0 !important;
-            margin: 0 !important;
-          }
-          
-          /* Compact spacing for print */
-          .printable-reminders h1 {
-            font-size: 16px !important;
-            margin: 0 !important;
-            line-height: 1.3 !important;
-          }
-          
-          .printable-reminders p {
-            margin: 0 !important;
-            font-size: 11px !important;
-            line-height: 1.3 !important;
-          }
-          
-          /* Remove dark mode backgrounds */
-          .printable-reminders .dark\\\\:bg-gray-800,
-          .printable-reminders .dark\\\\:bg-gray-900,
-          .printable-reminders .bg-gray-50 {
-            background: white !important;
-          }
-          
-          /* Table styling for print */
-          .printable-reminders table {
-            border-collapse: collapse !important;
-            width: 100% !important;
-            page-break-inside: avoid !important;
-            font-size: 11px !important;
-            margin-top: 8px !important;
-          }
-          
-          .printable-reminders thead {
-            display: table-header-group !important;
-            background-color: #e5e7eb !important;
-          }
-          
-          .printable-reminders tbody {
-            page-break-inside: avoid !important;
-          }
-          
-          .printable-reminders tr {
-            page-break-inside: avoid !important;
-            page-break-after: avoid !important;
-          }
-          
-          .printable-reminders th {
-            background-color: #e5e7eb !important;
-            font-weight: 700 !important;
-            padding: 4px 6px !important;
-            border: 1px solid #374151 !important;
-            color: #000 !important;
-            font-size: 11px !important;
-            line-height: 1.3 !important;
-          }
-          
-          .printable-reminders td {
-            padding: 3px 6px !important;
-            border: 1px solid #6b7280 !important;
-            color: #000 !important;
-            font-size: 11px !important;
-            line-height: 1.3 !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

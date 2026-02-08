@@ -28,7 +28,7 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 export const subAgentService = {
-  // Get all sub agents for a user
+  // Get all sub agents for a user (with live stats from policies table)
   getSubAgents: async (userId: string): Promise<SubAgent[]> => {
     try {
       const { data, error } = await supabase
@@ -42,6 +42,25 @@ export const subAgentService = {
         throw error;
       }
 
+      // Fetch all policies for this user that have a sub_agent_id
+      const { data: policies } = await supabase
+        .from('policies')
+        .select('sub_agent_id, total_premium, net_premium, premium_amount, sub_agent_commission_amount')
+        .eq('user_id', userId)
+        .not('sub_agent_id', 'is', null);
+
+      // Build stats map from live policy data
+      const statsMap: Record<string, { count: number; premium: number; commission: number }> = {};
+      (policies || []).forEach(p => {
+        if (!p.sub_agent_id) return;
+        if (!statsMap[p.sub_agent_id]) {
+          statsMap[p.sub_agent_id] = { count: 0, premium: 0, commission: 0 };
+        }
+        statsMap[p.sub_agent_id].count += 1;
+        statsMap[p.sub_agent_id].premium += parseFloat(p.total_premium || p.net_premium || p.premium_amount || '0');
+        statsMap[p.sub_agent_id].commission += parseFloat(p.sub_agent_commission_amount || '0');
+      });
+
       return (data || []).map(row => ({
         id: row.id,
         userId: row.user_id,
@@ -52,9 +71,9 @@ export const subAgentService = {
         passwordHash: row.password_hash,
         address: row.address,
         notes: row.notes,
-        totalPolicies: row.total_policies || 0,
-        totalPremiumAmount: parseFloat(row.total_premium_amount || '0'),
-        totalCommission: parseFloat(row.total_commission || '0'),
+        totalPolicies: statsMap[row.id]?.count || 0,
+        totalPremiumAmount: statsMap[row.id]?.premium || 0,
+        totalCommission: statsMap[row.id]?.commission || 0,
         isActive: row.is_active ?? true,
         createdAt: new Date(row.created_at),
         updatedAt: new Date(row.updated_at),
@@ -65,7 +84,7 @@ export const subAgentService = {
     }
   },
 
-  // Get a single sub agent by ID
+  // Get a single sub agent by ID (with live stats)
   getSubAgentById: async (id: string): Promise<SubAgent | null> => {
     try {
       const { data, error } = await supabase
@@ -81,6 +100,16 @@ export const subAgentService = {
 
       if (!data) return null;
 
+      // Fetch live stats from policies
+      const { data: policies } = await supabase
+        .from('policies')
+        .select('total_premium, net_premium, premium_amount, sub_agent_commission_amount')
+        .eq('sub_agent_id', id);
+
+      const totalPolicies = policies?.length || 0;
+      const totalPremiumAmount = (policies || []).reduce((sum, p) => sum + parseFloat(p.total_premium || p.net_premium || p.premium_amount || '0'), 0);
+      const totalCommission = (policies || []).reduce((sum, p) => sum + parseFloat(p.sub_agent_commission_amount || '0'), 0);
+
       return {
         id: data.id,
         userId: data.user_id,
@@ -91,9 +120,9 @@ export const subAgentService = {
         passwordHash: data.password_hash,
         address: data.address,
         notes: data.notes,
-        totalPolicies: data.total_policies || 0,
-        totalPremiumAmount: parseFloat(data.total_premium_amount || '0'),
-        totalCommission: parseFloat(data.total_commission || '0'),
+        totalPolicies,
+        totalPremiumAmount,
+        totalCommission,
         isActive: data.is_active ?? true,
         createdAt: new Date(data.created_at),
         updatedAt: new Date(data.updated_at),

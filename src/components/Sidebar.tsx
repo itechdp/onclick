@@ -11,7 +11,7 @@ export function Sidebar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, teamMember, isTeamMember, pageAccess, logout } = useAuth();
+  const { user, teamMember, isTeamMember, subAgent, isSubAgent, pageAccess, logout } = useAuth();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -34,6 +34,7 @@ export function Sidebar() {
     { path: '/client-folders', label: 'Client Folders', icon: FolderOpen },
     { path: '/leads', label: 'Leads', icon: UserPlus },
     { path: '/group-heads', label: 'Group Heads', icon: UsersRound },
+    { path: '/sub-agents', label: 'Sub Agents', icon: UserPlus },
     { path: '/tasks', label: 'Tasks', icon: CheckSquare },
     { path: '/reminders', label: 'Reminders', icon: Clock },
     { path: '/lapsed-policies', label: 'Lapsed', icon: XCircle },
@@ -48,7 +49,7 @@ export function Sidebar() {
     ...(user?.role === 'admin' ? [{ path: '/admin', label: 'Admin Panel', icon: Users }] : []),
   ];
   
-  console.log('Team member status:', isTeamMember, 'PageAccess:', pageAccess);
+  console.log('Team member status:', isTeamMember, 'Sub agent status:', isSubAgent, 'PageAccess:', pageAccess);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -97,7 +98,7 @@ export function Sidebar() {
 
           {/* Quick Actions */}
           <div className="p-4 space-y-2 border-b border-gray-200 dark:border-gray-700">
-            {(!isTeamMember || pageAccess.includes('/add-policy')) && (
+            {(!isTeamMember || pageAccess.includes('/add-policy')) && !isSubAgent && (
               <Link
                 to="/add-policy"
                 onClick={() => setIsMobileOpen(false)}
@@ -112,7 +113,7 @@ export function Sidebar() {
                 {!isCollapsed && <span className="font-medium">Add Policy</span>}
               </Link>
             )}
-            {!isTeamMember && user?.role !== 'admin' && (user?.subscriptionStatus === 'trial' || user?.subscriptionStatus === 'expired') && (
+            {!isTeamMember && !isSubAgent && user?.role !== 'admin' && (user?.subscriptionStatus === 'trial' || user?.subscriptionStatus === 'expired') && (
               <Link
                 to="/pricing"
                 onClick={() => setIsMobileOpen(false)}
@@ -146,8 +147,8 @@ export function Sidebar() {
           <nav className="flex-1 overflow-y-auto p-4 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              // Team member: check if they have access to this page
-              const hasAccess = !isTeamMember || pageAccess.includes(item.path);
+              // Team member or sub agent: check if they have access to this page
+              const hasAccess = (!isTeamMember && !isSubAgent) || pageAccess.includes(item.path);
               
               return (
                 <Link
@@ -212,10 +213,10 @@ export function Sidebar() {
                 {!isCollapsed && (
                   <div className="flex-1 text-left">
                     <p className="font-medium text-sm truncate">
-                      {isTeamMember ? teamMember?.fullName : user?.displayName}
+                      {isSubAgent ? subAgent?.subAgentName : isTeamMember ? teamMember?.fullName : user?.displayName}
                     </p>
                     <p className="text-xs text-slate-500 dark:text-gray-400 capitalize">
-                      {isTeamMember ? 'Team Member' : user?.role}
+                      {isSubAgent ? 'Sub Agent' : isTeamMember ? 'Team Member' : user?.role}
                     </p>
                   </div>
                 )}
@@ -226,13 +227,13 @@ export function Sidebar() {
                   <div className="py-1">
                     <div className="px-4 py-2 text-sm text-slate-700 dark:text-gray-300 border-b border-slate-100 dark:border-gray-700">
                       <p className="font-medium text-slate-900 dark:text-white">
-                        {isTeamMember ? teamMember?.fullName : user?.displayName}
+                        {isSubAgent ? subAgent?.subAgentName : isTeamMember ? teamMember?.fullName : user?.displayName}
                       </p>
                       <p className="text-xs text-slate-500 dark:text-gray-400">
-                        {isTeamMember ? teamMember?.email : user?.email}
+                        {isSubAgent ? subAgent?.loginEmail : isTeamMember ? teamMember?.email : user?.email}
                       </p>
                       <p className="text-xs text-slate-500 dark:text-gray-400 capitalize">
-                        {isTeamMember ? 'Team Member' : user?.role}
+                        {isSubAgent ? 'Sub Agent' : isTeamMember ? 'Team Member' : user?.role}
                       </p>
                     </div>
                     <button

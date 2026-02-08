@@ -48,6 +48,9 @@ export function AddPolicy() {
     totalPremium: '',
     commissionPercentage: '',
     commissionAmount: '',
+    subAgentId: '',
+    subAgentCommissionPercentage: '',
+    subAgentCommissionAmount: '',
     remark: '',
     referenceFromName: '',
     isOneTimePolicy: false,
@@ -89,6 +92,10 @@ export function AddPolicy() {
   // Group Heads state for Member Of dropdown
   const [groupHeads, setGroupHeads] = useState<Array<{id: string, name: string}>>([]);
   const [isLoadingGroupHeads, setIsLoadingGroupHeads] = useState(true);
+  
+  // Sub Agents state for Sub Agent dropdown
+  const [subAgents, setSubAgents] = useState<Array<{id: string, name: string}>>([]);
+  const [isLoadingSubAgents, setIsLoadingSubAgents] = useState(true);
   
   // Upgrade modal state
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -147,6 +154,26 @@ export function AddPolicy() {
 
     if (user) {
       fetchGroupHeads();
+    }
+  }, [user]);
+
+  // Fetch sub agents on component mount
+  useEffect(() => {
+    const fetchSubAgents = async () => {
+      try {
+        setIsLoadingSubAgents(true);
+        const { subAgentService } = await import('../services/subAgentService');
+        const agents = await subAgentService.getSubAgents(user!.id);
+        setSubAgents(agents.map(sa => ({ id: sa.id, name: sa.subAgentName })));
+      } catch (error) {
+        console.error('Error fetching sub agents:', error);
+      } finally {
+        setIsLoadingSubAgents(false);
+      }
+    };
+
+    if (user) {
+      fetchSubAgents();
     }
   }, [user]);
 
@@ -1138,6 +1165,9 @@ export function AddPolicy() {
       totalPremium: '',
       commissionPercentage: '',
       commissionAmount: '',
+      subAgentId: '',
+      subAgentCommissionPercentage: '',
+      subAgentCommissionAmount: '',
       remark: '',
       referenceFromName: '',
       isOneTimePolicy: false,
@@ -1230,6 +1260,9 @@ export function AddPolicy() {
         totalPremium: formData.totalPremium,
         commissionPercentage: formData.commissionPercentage || undefined,
         commissionAmount: formData.commissionAmount || undefined,
+        subAgentId: formData.subAgentId || undefined,
+        subAgentCommissionPercentage: formData.subAgentCommissionPercentage || undefined,
+        subAgentCommissionAmount: formData.subAgentCommissionAmount || undefined,
         remark: formData.remark,
         productType: productType,
         referenceFromName: formData.referenceFromName,
@@ -1282,6 +1315,9 @@ export function AddPolicy() {
           totalPremium: '',
           commissionPercentage: '',
           commissionAmount: '',
+          subAgentId: '',
+          subAgentCommissionPercentage: '',
+          subAgentCommissionAmount: '',
           remark: '',
           referenceFromName: '',
           isOneTimePolicy: false,
@@ -1339,7 +1375,7 @@ export function AddPolicy() {
     // Calculate commission amount and total premium when relevant fields change
     // For Two wheeler/Four wheeler: commission is calculated on OD Premium only
     // For others: commission is calculated on Net Premium
-    if (name === 'commissionPercentage' || name === 'netPremium' || name === 'odPremium' || name === 'thirdPartyPremium' || name === 'gst') {
+    if (name === 'commissionPercentage' || name === 'netPremium' || name === 'odPremium' || name === 'thirdPartyPremium' || name === 'gst' || name === 'subAgentCommissionPercentage') {
       setFormData(prev => {
         const updatedData = { ...prev, [name]: value };
         
@@ -1354,43 +1390,62 @@ export function AddPolicy() {
         if (name === 'commissionPercentage') {
           let baseAmount = 0;
           if (isTwoOrFourWheeler) {
-            // For Two/Four wheeler: use OD Premium
             baseAmount = parseFloat(prev.odPremium || '0');
           } else {
-            // For others: use Net Premium
             baseAmount = parseFloat(prev.netPremium || '0');
           }
           const percentage = parseFloat(value || '0');
           const commissionAmount = (baseAmount * percentage) / 100;
           updatedData.commissionAmount = commissionAmount > 0 ? commissionAmount.toFixed(2) : '';
         } else if (name === 'netPremium') {
-          // For non-Two/Four wheeler products
           if (!isTwoOrFourWheeler) {
             const percentage = parseFloat(prev.commissionPercentage || '0');
             const netPremium = parseFloat(value || '0');
             const commissionAmount = (netPremium * percentage) / 100;
             updatedData.commissionAmount = commissionAmount > 0 ? commissionAmount.toFixed(2) : '';
+            // Also recalculate sub agent commission
+            if (prev.subAgentCommissionPercentage) {
+              const saPercentage = parseFloat(prev.subAgentCommissionPercentage || '0');
+              const saCommission = (netPremium * saPercentage) / 100;
+              updatedData.subAgentCommissionAmount = saCommission > 0 ? saCommission.toFixed(2) : '';
+            }
           }
         } else if (name === 'odPremium') {
-          // For Two/Four wheeler products: recalculate based on OD Premium
           if (isTwoOrFourWheeler) {
             const percentage = parseFloat(prev.commissionPercentage || '0');
             const odPremium = parseFloat(value || '0');
             const commissionAmount = (odPremium * percentage) / 100;
             updatedData.commissionAmount = commissionAmount > 0 ? commissionAmount.toFixed(2) : '';
+            // Also recalculate sub agent commission
+            if (prev.subAgentCommissionPercentage) {
+              const saPercentage = parseFloat(prev.subAgentCommissionPercentage || '0');
+              const saCommission = (odPremium * saPercentage) / 100;
+              updatedData.subAgentCommissionAmount = saCommission > 0 ? saCommission.toFixed(2) : '';
+            }
           }
+        }
+
+        // Auto-calculate Sub Agent Commission Amount
+        if (name === 'subAgentCommissionPercentage') {
+          let baseAmount = 0;
+          if (isTwoOrFourWheeler) {
+            baseAmount = parseFloat(prev.odPremium || '0');
+          } else {
+            baseAmount = parseFloat(prev.netPremium || '0');
+          }
+          const saPercentage = parseFloat(value || '0');
+          const saCommission = (baseAmount * saPercentage) / 100;
+          updatedData.subAgentCommissionAmount = saCommission > 0 ? saCommission.toFixed(2) : '';
         }
         
         // Auto-calculate Total Premium based on product type
         if (isTwoOrFourWheeler) {
-          // For Two/Four Wheeler: Total Premium = OD Premium + Third Party Premium + GST
           const od = parseFloat(name === 'odPremium' ? value : prev.odPremium || '0');
           const tp = parseFloat(name === 'thirdPartyPremium' ? value : prev.thirdPartyPremium || '0');
           const gst = parseFloat(name === 'gst' ? value : prev.gst || '0');
           const total = od + tp + gst;
           updatedData.totalPremium = total > 0 ? total.toFixed(2) : '';
         } else {
-          // For Others: Total Premium = Net Premium + GST
           const netPremium = parseFloat(name === 'netPremium' ? value : prev.netPremium || '0');
           const gst = parseFloat(name === 'gst' ? value : prev.gst || '0');
           const total = netPremium + gst;
@@ -1788,6 +1843,48 @@ export function AddPolicy() {
               {!isLoadingGroupHeads && groupHeads.length === 0 && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
                   No group heads found. Create one in the Group Heads section first.
+                </p>
+              )}
+            </div>
+
+            {/* Sub Agent dropdown */}
+            <div className="space-y-2">
+              <label htmlFor="subAgentId" className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                <User className="inline h-4 w-4 mr-1" />
+                Sub Agent
+              </label>
+              <select
+                id="subAgentId"
+                name="subAgentId"
+                value={formData.subAgentId || ''}
+                onChange={handleInputChange}
+                disabled={isLoadingSubAgents}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="">
+                  {isLoadingSubAgents ? 'Loading sub agents...' : 'Select Sub Agent'}
+                </option>
+                {!isLoadingSubAgents && subAgents.map(sa => (
+                  <option key={sa.id} value={sa.id}>
+                    {sa.name}
+                  </option>
+                ))}
+                {!isLoadingSubAgents && subAgents.length === 0 && (
+                  <option value="" disabled>No sub agents available</option>
+                )}
+              </select>
+              {isLoadingSubAgents && (
+                <p className="text-xs text-purple-500 dark:text-purple-400 mt-1 flex items-center">
+                  <svg className="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Loading sub agents from database...
+                </p>
+              )}
+              {!isLoadingSubAgents && subAgents.length === 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  No sub agents found. Create one in the Sub Agents section first.
                 </p>
               )}
             </div>
@@ -2222,6 +2319,56 @@ export function AddPolicy() {
                       }
                     </p>
                   </div>
+
+                  {/* Sub Agent Commission Section - Only shown when sub agent is selected */}
+                  {formData.subAgentId && (
+                    <>
+                      {/* Sub Agent Commission Percentage */}
+                      <div>
+                        <label htmlFor="subAgentCommissionPercentage" className="block text-sm font-semibold text-purple-700 dark:text-purple-300 mb-2">
+                          Sub Agent Commission (%)
+                        </label>
+                        <input
+                          type="number"
+                          id="subAgentCommissionPercentage"
+                          name="subAgentCommissionPercentage"
+                          value={formData.subAgentCommissionPercentage || ''}
+                          onChange={handleInputChange}
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          className="w-full px-4 py-3 border border-purple-300 dark:border-purple-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 shadow-sm"
+                          placeholder="Enter sub agent commission %"
+                        />
+                      </div>
+
+                      {/* Sub Agent Commission Amount (Auto-calculated) */}
+                      <div>
+                        <label htmlFor="subAgentCommissionAmount" className="block text-sm font-semibold text-purple-700 dark:text-purple-300 mb-2">
+                          Sub Agent Commission Amount
+                        </label>
+                        <input
+                          type="number"
+                          id="subAgentCommissionAmount"
+                          name="subAgentCommissionAmount"
+                          value={formData.subAgentCommissionAmount || ''}
+                          readOnly
+                          className="w-full px-4 py-3 border border-purple-300 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-lg cursor-not-allowed shadow-sm"
+                          placeholder="Auto-calculated"
+                        />
+                        <p className="mt-1 text-xs text-purple-500 dark:text-purple-400">
+                          {(productType.toLowerCase().includes('two-wheeler') || 
+                            productType.toLowerCase().includes('two wheeler') ||
+                            productType.toLowerCase().includes('four-wheeler') ||
+                            productType.toLowerCase().includes('four wheeler') ||
+                            productType.toLowerCase().includes('private car'))
+                            ? `Calculated as ${formData.subAgentCommissionPercentage || '0'}% of OD Premium`
+                            : `Calculated as ${formData.subAgentCommissionPercentage || '0'}% of Net Premium`
+                          }
+                        </p>
+                      </div>
+                    </>
+                  )}
 
                   {/* Remark */}
                   <div className="md:col-span-2 lg:col-span-3">

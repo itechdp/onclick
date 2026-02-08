@@ -46,6 +46,11 @@ export interface Policy {
   totalPremium?: string;
   commissionPercentage?: string;
   commissionAmount?: string;
+  // Sub Agent fields
+  subAgentId?: string;
+  sub_agent_id?: string;
+  subAgentCommissionPercentage?: string;
+  subAgentCommissionAmount?: string;
   remark?: string;
   productType?: string;
   referenceFromName?: string;
@@ -94,6 +99,10 @@ export interface PolicyFormData {
   totalPremium?: string;
   commissionPercentage?: string;
   commissionAmount?: string;
+  // Sub Agent fields
+  subAgentId?: string;
+  subAgentCommissionPercentage?: string;
+  subAgentCommissionAmount?: string;
   remark?: string;
   referenceFromName?: string;
   isOneTimePolicy?: boolean;

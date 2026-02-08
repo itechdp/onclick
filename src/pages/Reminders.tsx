@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { usePolicies } from '../context/PolicyContext';
+import { useAuth } from '../context/AuthContext';
 import { Policy } from '../types';
 import { AlertTriangle, Calendar, Clock, Building, MessageCircle, FileX, Eye, RefreshCw, FileText, StickyNote, Printer } from 'lucide-react';
 import { format, differenceInDays, isAfter, isBefore, addDays } from 'date-fns';
@@ -35,6 +36,7 @@ const safeFormatDate = (dateValue: string | Date | undefined | null, formatStrin
 
 export function Reminders() {
   const { policies, loading, error, refreshPolicies, deletePolicy } = usePolicies();
+  const { isSubAgent } = useAuth();
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [selectedPolicy, setSelectedPolicy] = useState<(Policy & { daysRemaining: number }) | null>(null);
   const [showLapsedReasonModal, setShowLapsedReasonModal] = useState(false);
@@ -563,6 +565,7 @@ Thank you!`;
             </div>
             <div>
               <div className="flex space-x-2 flex-wrap gap-1">
+                {!isSubAgent && (
                 <button
                   onClick={() => handleRenewPolicy(policy)}
                   className="inline-flex items-center px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-sharp transition-colors duration-200"
@@ -571,7 +574,9 @@ Thank you!`;
                   <RefreshCw className="h-3 w-3 mr-1" />
                   Renew Policy
                 </button>
+                )}
                 
+                {!isSubAgent && (
                 <button
                   onClick={() => handleSendReminder(policy, daysRemaining)}
                   className={`inline-flex items-center px-3 py-1 text-white text-sm rounded-sharp transition-colors duration-200 ${
@@ -585,6 +590,7 @@ Thank you!`;
                   <MessageCircle className="h-3 w-3 mr-1" />
                   Send Reminder
                 </button>
+                )}
                 
                 <button
                   onClick={() => handleViewPolicy(policy)}
@@ -609,6 +615,7 @@ Thank you!`;
                   View Document
                 </button>
                 
+                {!isSubAgent && (
                 <button
                   onClick={() => handleOpenNotes(policy)}
                   className="inline-flex items-center px-3 py-1 bg-pink-600 hover:bg-pink-700 text-white text-sm rounded-sharp transition-colors duration-200"
@@ -617,7 +624,9 @@ Thank you!`;
                   <StickyNote className="h-3 w-3 mr-1" />
                   Notes
                 </button>
+                )}
                 
+                {!isSubAgent && (
                 <button
                   onClick={() => handleMarkAsLapsed(policy)}
                   className="inline-flex items-center px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white text-sm rounded-sharp transition-colors duration-200"
@@ -626,6 +635,7 @@ Thank you!`;
                   <AlertTriangle className="h-3 w-3 mr-1" />
                   Mark Lapsed
                 </button>
+                )}
               </div>
             </div>
           </div>

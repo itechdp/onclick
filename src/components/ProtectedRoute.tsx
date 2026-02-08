@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, teamMember, isTeamMember, pageAccess, loading } = useAuth();
+  const { user, teamMember, isTeamMember, pageAccess, loading, subAgent, isSubAgent } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showWarning, setShowWarning] = useState(false);
@@ -26,6 +26,22 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         return;
       }
       
+      // Sub agents: check if they have access to current page (same as team members)
+      if (isSubAgent && subAgent) {
+        const currentPath = location.pathname;
+        const hasAccess = pageAccess.includes(currentPath);
+        
+        if (!hasAccess) {
+          // Redirect to first accessible page (Policies)
+          const firstPage = pageAccess[0] || '/';
+          navigate(firstPage);
+          return;
+        }
+        
+        setShowWarning(false);
+        return;
+      }
+
       // Team members: check if they have access to current page
       if (isTeamMember && teamMember) {
         const currentPath = location.pathname;
@@ -44,24 +60,25 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         return;
       }
       
-      if (!user && !loading) {
+      if (!user && !loading && !subAgent) {
         console.log('❌ No user found after loading complete, will redirect to login');
         setShouldRedirect(true);
         return;
       }
 
       // If no user at this point, return
-      if (!user) {
+      if (!user && !subAgent) {
         return;
       }
 
       // Admins don't need subscription checks
-      if (user.role === 'admin') {
+      if (user && user.role === 'admin') {
         setShowWarning(false);
         return;
       }
 
       // Check if user can access the system
+      if (!user) return;
       const canAccess = supabaseAuthService.canAccessSystem(user);
       
       if (!canAccess) {
@@ -92,7 +109,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     };
 
     checkAccessAndSubscription();
-  }, [user, teamMember, isTeamMember, pageAccess, navigate, location.pathname, loading]);
+  }, [user, teamMember, isTeamMember, subAgent, isSubAgent, pageAccess, navigate, location.pathname, loading]);
 
   if (loading) {
     console.log('⏳ ProtectedRoute: Still loading auth...');
@@ -106,7 +123,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  if (!user && !teamMember) {
+  if (!user && !teamMember && !subAgent) {
     console.log('🚫 ProtectedRoute: No auth found, redirecting to login');
     return <Navigate to="/login" replace />;
   }

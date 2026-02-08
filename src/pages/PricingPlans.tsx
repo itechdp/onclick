@@ -3,7 +3,52 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { razorpayService, SubscriptionPlan } from '../services/razorpayService';
 import toast from 'react-hot-toast';
-import { Check, Loader2, Sparkles, Zap, Crown } from 'lucide-react';
+import { Check, Loader2, Sparkles, Zap, Crown, Star } from 'lucide-react';
+
+// Starter plan - hardcoded (not from DB)
+const starterPlan: SubscriptionPlan = {
+  id: 'starter-plan',
+  name: 'starter',
+  displayName: 'Starter',
+  description: 'Perfect for getting started with basic policy management',
+  priceInr: 499,
+  currency: 'INR',
+  durationDays: 30,
+  features: [],
+  isActive: true,
+};
+
+// All features provided across all plans
+const planSpecificFeature: Record<string, string> = {
+  starter: 'AI Policy Upload 25/Monthly',
+  basic: 'AI Policy Upload 100/Monthly',
+  standard: 'AI Policy Upload 300/Monthly',
+  premium: 'AI Policy Upload 800/Monthly',
+};
+
+const allFeatures = [
+  'Unlimited Manual Policy Upload',
+  'Dashboard with Analytics',
+  'Client Document Folders',
+  'Lead Management & Follow-ups',
+  'Group Head Management',
+  'Sub Agent Management & Portal',
+  'Team Member Access with Permissions',
+  'Task Management',
+  'Policy Reminders & Alerts',
+  'WhatsApp Reminder Integration',
+  'Lapsed Policy Tracking',
+  'Claims Management & Settlement',
+  'Commission Tracking (Agent, Sub Agent, Group Head)',
+  'Activity Logs',
+  'Restore Deleted Policies',
+  'CSV Export & Print Reports',
+  'Search & Advanced Filters',
+  'PDF Document Upload & Storage',
+  'Dark Mode',
+  'Mobile Responsive',
+  'Email Support',
+];
 
 export function PricingPlans() {
   const { user, loading: authLoading } = useAuth();
@@ -106,6 +151,8 @@ export function PricingPlans() {
 
   const getPlanIcon = (planName: string) => {
     switch (planName) {
+      case 'starter':
+        return <Star className="w-8 h-8" />;
       case 'basic':
         return <Check className="w-8 h-8" />;
       case 'standard':
@@ -121,6 +168,8 @@ export function PricingPlans() {
 
   const getPlanColor = (planName: string) => {
     switch (planName) {
+      case 'starter':
+        return 'from-gray-500 to-gray-600';
       case 'basic':
         return 'from-blue-500 to-blue-600';
       case 'standard':
@@ -161,8 +210,10 @@ export function PricingPlans() {
         </div>
 
         {/* Pricing Cards */}
+        {/* Enterprise plan hidden - uncomment the filter below to show it again */}
+        {/* To restore: remove the .filter() below */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {plans.map((plan) => (
+          {[starterPlan, ...plans.filter(plan => plan.name !== 'enterprise')].map((plan) => (
             <div
               key={plan.id}
               className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transition-transform hover:scale-105 ${
@@ -182,6 +233,30 @@ export function PricingPlans() {
                   {getPlanIcon(plan.name)}
                   {plan.name !== 'enterprise' && (
                     <div className="text-right">
+                      {plan.name === 'starter' && (
+                        <>
+                          <div className="text-2xl font-bold line-through opacity-70">₹999</div>
+                          <div className="text-xs font-semibold bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full inline-block mb-1">LIMITED TIME OFFER</div>
+                        </>
+                      )}
+                      {plan.name === 'basic' && (
+                        <>
+                          <div className="text-2xl font-bold line-through opacity-70">₹1,299</div>
+                          <div className="text-xs font-semibold bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full inline-block mb-1">LIMITED TIME OFFER</div>
+                        </>
+                      )}
+                      {plan.name === 'standard' && (
+                        <>
+                          <div className="text-2xl font-bold line-through opacity-70">₹2,499</div>
+                          <div className="text-xs font-semibold bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full inline-block mb-1">LIMITED TIME OFFER</div>
+                        </>
+                      )}
+                      {plan.name === 'premium' && (
+                        <>
+                          <div className="text-2xl font-bold line-through opacity-70">₹3,999</div>
+                          <div className="text-xs font-semibold bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full inline-block mb-1">LIMITED TIME OFFER</div>
+                        </>
+                      )}
                       <div className="text-4xl font-bold">₹{plan.priceInr.toLocaleString('en-IN')}</div>
                       <div className="text-sm opacity-90">/{plan.durationDays} days</div>
                     </div>
@@ -194,7 +269,13 @@ export function PricingPlans() {
               {/* Features List */}
               <div className="p-8">
                 <ul className="space-y-4 mb-8">
-                  {plan.features.map((feature, index) => (
+                  {planSpecificFeature[plan.name] && (
+                    <li className="flex items-start">
+                      <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
+                      <span className="text-gray-700 dark:text-gray-300 font-semibold">{planSpecificFeature[plan.name]}</span>
+                    </li>
+                  )}
+                  {allFeatures.map((feature, index) => (
                     <li key={index} className="flex items-start">
                       <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
                       <span className="text-gray-700 dark:text-gray-300">{feature}</span>

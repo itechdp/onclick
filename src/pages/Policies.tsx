@@ -63,7 +63,7 @@ const safeFormatDate = (dateValue: string | Date | undefined | null, formatStrin
 
 export function Policies() {
   const { policies, deletePolicy, updatePolicy, loading, error, refreshPolicies, validateUserPassword, permanentlyDeletePolicy } = usePolicies();
-  const { user } = useAuth();
+  const { user, isSubAgent } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [selectedCompany, setSelectedCompany] = useState('');
@@ -921,6 +921,7 @@ export function Policies() {
                         >
                           <FolderOpen className="h-4 w-4" />
                         </button>
+                        {!isSubAgent && (
                         <button
                           onClick={() => handleEdit(policy)}
                           className="text-amber-600 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-300 p-2 rounded-sharp hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all duration-200 shadow-sm hover:shadow-sm"
@@ -928,6 +929,8 @@ export function Policies() {
                         >
                           <Edit className="h-4 w-4" />
                         </button>
+                        )}
+                        {!isSubAgent && (<>
                         <button
                           onClick={() => handleClaimPolicy(policy.id)}
                           className={`p-2 rounded-sharp transition-all duration-200 shadow-sm hover:shadow-sm ${
@@ -959,6 +962,7 @@ export function Policies() {
                         >
                           <Share2 className="h-4 w-4" />
                         </button>
+                        </>)}
                         <button
                           onClick={() => setSelectedPolicy(policy)}
                           className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 p-2 rounded-sharp hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 shadow-sm hover:shadow-sm"
@@ -966,6 +970,7 @@ export function Policies() {
                         >
                           <Eye className="h-4 w-4" />
                         </button>
+                        {!isSubAgent && (<>
                         <button
                           onClick={() => handleDelete(policy.id)}
                           className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 p-2 rounded-sharp hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 shadow-sm hover:shadow-sm"
@@ -986,6 +991,7 @@ export function Policies() {
                         >
                           <AlertTriangle className="h-4 w-4" />
                         </button>
+                        </>)}
                       </div>
 
                       {/* Mobile Actions - Hamburger Menu */}
@@ -1026,6 +1032,7 @@ export function Policies() {
                                 }`} />
                                 Documents Folder {!policy.documentsFolderLink && '(Not Available)'}
                               </button>
+                              {!isSubAgent && (
                               <button
                                 onClick={() => {
                                   handleEdit(policy);
@@ -1036,6 +1043,8 @@ export function Policies() {
                                 <Edit className="h-4 w-4 mr-3 text-amber-500" />
                                 Edit Policy
                               </button>
+                              )}
+                              {!isSubAgent && (
                               <button
                                 onClick={() => {
                                   handleClaimPolicy(policy.id);
@@ -1057,6 +1066,7 @@ export function Policies() {
                                   : 'Start Claim Process'
                                 }
                               </button>
+                              )}
                               <button
                                 onClick={() => {
                                   setSelectedPolicy(policy);
@@ -1067,6 +1077,7 @@ export function Policies() {
                                 <Eye className="h-4 w-4 mr-3 text-blue-500" />
                                 View Details
                               </button>
+                              {!isSubAgent && (<>
                               <button
                                 onClick={() => {
                                   handleDelete(policy.id);
@@ -1091,6 +1102,7 @@ export function Policies() {
                                 <AlertTriangle className="h-4 w-4 mr-3 text-orange-500" />
                                 {user?.role === 'admin' ? 'Permanent Delete' : 'Request Permanent Delete'}
                               </button>
+                              </>)}
                             </div>
                           </div>
                         )}

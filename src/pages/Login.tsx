@@ -12,10 +12,14 @@ const Login: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showExpiredModal, setShowExpiredModal] = useState(false);
-  const { login, user, teamMember, isTeamMember } = useAuth();
+  const { login, user, teamMember, isTeamMember, subAgent, isSubAgent } = useAuth();
   const navigate = useNavigate();
 
   // If already logged in, redirect based on user type
+  if (subAgent || isSubAgent) {
+    return <Navigate to="/" replace />;
+  }
+
   if (user || teamMember) {
     // Team members go straight to dashboard
     if (isTeamMember) {
@@ -40,6 +44,13 @@ const Login: React.FC = () => {
     try {
       await login(credentials);
       
+      // Check if sub agent logged in - redirect to policies
+      const subAgentSession = localStorage.getItem('subAgentSession');
+      if (subAgentSession) {
+        navigate('/');
+        return;
+      }
+
       // Check if there's an intended plan to subscribe to
       const intendedPlan = sessionStorage.getItem('intendedPlan');
       if (intendedPlan) {

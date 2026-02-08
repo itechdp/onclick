@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Search, Folder, FileText, FolderOpen, Upload, X, Download, Eye, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { usePolicies } from '../context/PolicyContext';
 import { getClientFolders } from '../services/clientFolderService';
 import { storageService } from '../services/storageService';
 import toast from 'react-hot-toast';
@@ -17,7 +18,8 @@ interface ClientFolder {
 }
 
 export function ClientFolders() {
-  const { user, effectiveUserId } = useAuth();
+  const { effectiveUserId, isSubAgent, subAgent } = useAuth();
+  const { policies: subAgentPolicies } = usePolicies();
   const [clientFolders, setClientFolders] = useState<ClientFolder[]>([]);
   const [filteredFolders, setFilteredFolders] = useState<ClientFolder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,19 +40,31 @@ export function ClientFolders() {
   const [loadingDocuments, setLoadingDocuments] = useState(false);
 
   const loadClientFolders = useCallback(async () => {
-    if (!user?.id) return;
+    if (!effectiveUserId) return;
     
     try {
       setLoading(true);
-      const folders = await getClientFolders(user.id);
-      setClientFolders(folders);
+      const folders = await getClientFolders(effectiveUserId);
+      
+      // Sub agents: only show folders for their own policies
+      if (isSubAgent && subAgent) {
+        const subAgentPolicyholders = new Set(
+          subAgentPolicies.map(p => (p.policyholderName || '').toLowerCase())
+        );
+        const filtered = folders.filter(f => 
+          subAgentPolicyholders.has((f.policyholderName || '').toLowerCase())
+        );
+        setClientFolders(filtered);
+      } else {
+        setClientFolders(folders);
+      }
     } catch (error) {
       console.error('Error loading client folders:', error);
       toast.error('Failed to load client folders');
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [effectiveUserId, isSubAgent, subAgent, subAgentPolicies]);
 
   const filterFolders = useCallback(() => {
     let filtered = [...clientFolders];
@@ -309,6 +323,7 @@ export function ClientFolders() {
                   <Eye className="h-4 w-4" />
                   <span>View Documents</span>
                 </button>
+                {!isSubAgent && (
                 <button
                   onClick={() => handleOpenUploadModal(folder)}
                   className="w-full flex items-center justify-center space-x-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-sharp text-sm font-medium transition-colors"
@@ -316,6 +331,7 @@ export function ClientFolders() {
                   <Upload className="h-4 w-4" />
                   <span>Upload Documents</span>
                 </button>
+                )}
               </div>
             </div>
           ))}
@@ -522,6 +538,7 @@ export function ClientFolders() {
                         >
                           <Download className="h-5 w-5" />
                         </button>
+                        {!isSubAgent && (
                         <button
                           onClick={() => handleDeleteDocument(doc.path)}
                           className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-sharp transition-colors"
@@ -529,6 +546,7 @@ export function ClientFolders() {
                         >
                           <Trash2 className="h-5 w-5" />
                         </button>
+                        )}
                       </div>
                     </div>
                   ))}

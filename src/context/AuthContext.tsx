@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { AppUser, LoginCredentials, TeamMember } from '../types';
 import { supabaseAuthService } from '../services/supabaseAuthService';
 import { teamMemberService } from '../services/teamMemberService';
+import { subAgentService, SubAgent } from '../services/subAgentService';
 import { supabase } from '../config/supabase';
 import toast from 'react-hot-toast';
 
@@ -9,6 +10,8 @@ interface AuthContextType {
   user: AppUser | null;
   teamMember: TeamMember | null;
   isTeamMember: boolean;
+  subAgent: SubAgent | null;
+  isSubAgent: boolean;
   pageAccess: string[];
   effectiveUserId: string | null; // Admin's user ID for team members, own user ID for regular users
   loading: boolean;
@@ -22,6 +25,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [teamMember, setTeamMember] = useState<TeamMember | null>(null);
+  const [subAgent, setSubAgent] = useState<SubAgent | null>(null);
   const [pageAccess, setPageAccess] = useState<string[]>([]);
   const [effectiveUserId, setEffectiveUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,6 +35,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const initializeAuth = async () => {
       try {
         console.log('🔄 Initializing auth...');
+
+        // Check for sub agent session in localStorage
+        const subAgentSession = localStorage.getItem('subAgentSession');
+        if (subAgentSession) {
+          try {
+            console.log('🕵️ Found sub agent session in localStorage');
+            const parsedSession = JSON.parse(subAgentSession);
+            const subAgentData = await subAgentService.getSubAgentById(parsedSession.id);
+            if (subAgentData && subAgentData.isActive) {
+              console.log('✅ Sub agent session valid, restoring...');
+              setSubAgent(subAgentData);
+              setPageAccess(['/', '/policies', '/reminders', '/client-folders']);
+              setEffectiveUserId(subAgentData.userId);
+              setLoading(false);
+              return;
+            } else {
+              console.log('❌ Sub agent session invalid, clearing...');
+              localStorage.removeItem('subAgentSession');
+            }
+          } catch (err) {
+            console.error('Error parsing sub agent session:', err);
+            localStorage.removeItem('subAgentSession');
+          }
+        }
         
         // First, check if there's a team member session in localStorage
         const teamMemberSession = localStorage.getItem('teamMemberSession');
@@ -202,10 +230,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
       } catch (teamMemberError) {
-        console.log('Not a team member, trying regular auth:', teamMemberError);
+        console.log('Not a team member, trying sub agent auth:', teamMemberError);
+      }
+
+      // Next, try sub agent authentication
+      try {
+        const subAgentAuth = await subAgentService.authenticateSubAgent(
+          credentials.email,
+          credentials.password
+        );
+
+        if (subAgentAuth) {
+          console.log('Sub agent authenticated:', subAgentAuth);
+
+          const sessionData = {
+            id: subAgentAuth.id,
+            loginEmail: subAgentAuth.loginEmail,
+            subAgentName: subAgentAuth.subAgentName,
+            userId: subAgentAuth.userId,
+          };
+          localStorage.setItem('subAgentSession', JSON.stringify(sessionData));
+
+          setSubAgent(subAgentAuth);
+          setPageAccess(['/', '/policies', '/reminders', '/client-folders']);
+          setEffectiveUserId(subAgentAuth.userId); // Use admin's ID for data access
+          setUser(null);
+          setTeamMember(null);
+
+          toast.success(`Welcome, ${subAgentAuth.subAgentName}!`);
+          return;
+        }
+      } catch (subAgentError) {
+        console.log('Not a sub agent, trying regular auth:', subAgentError);
       }
       
-      // If not a team member, try regular user authentication
+      // If not a team member or sub agent, try regular user authentication
       const { user: authenticatedUser, error } = await supabaseAuthService.signin(credentials);
       
       if (error) {
@@ -246,7 +305,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      if (teamMember) {
+      if (subAgent) {
+        // Sub agent logout
+        localStorage.removeItem('subAgentSession');
+        setSubAgent(null);
+        setPageAccess([]);
+        setEffectiveUserId(null);
+      } else if (teamMember) {
         // Team member logout - clear local state and localStorage
         localStorage.removeItem('teamMemberSession');
         setTeamMember(null);
@@ -268,12 +333,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     teamMember,
     isTeamMember: !!teamMember,
+    subAgent,
+    isSubAgent: !!subAgent,
     pageAccess,
     effectiveUserId,
     loading,
     login,
     logout,
-    isAuthenticated: !!(user || teamMember)
+    isAuthenticated: !!(user || teamMember || subAgent)
   };
 
   return (

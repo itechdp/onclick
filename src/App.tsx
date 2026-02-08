@@ -29,6 +29,7 @@ import { LeadsDashboard } from './pages/LeadsDashboard';
 import { FollowUpLeads } from './pages/FollowUpLeads';
 import { FeatureRequests } from './pages/FeatureRequests';
 import { Settings } from './pages/Settings';
+import { SubAgents } from './pages/SubAgents';
 
 function App() {
   return (
@@ -68,6 +69,7 @@ function App() {
                   <Route path="claims" element={<Claims />} />
                   <Route path="commissions" element={<Commissions />} />
                   <Route path="group-heads" element={<GroupHeads />} />
+                  <Route path="sub-agents" element={<SubAgents />} />
                   <Route path="activity-log" element={<ActivityLogPage />} />
                   <Route path="restore" element={<RestorePage />} />
                   <Route path="lapsed-policies" element={<LapsedPoliciesPage />} />

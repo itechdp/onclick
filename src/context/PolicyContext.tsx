@@ -27,7 +27,7 @@ interface PolicyContextType {
 const PolicyContext = createContext<PolicyContextType | undefined>(undefined);
 
 export function PolicyProvider({ children }: { children: ReactNode }) {
-  const { user, effectiveUserId } = useAuth();
+  const { user, effectiveUserId, subAgent, isSubAgent } = useAuth();
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [deletedPolicies, setDeletedPolicies] = useState<DeletedPolicy[]>([]);
@@ -52,7 +52,13 @@ export function PolicyProvider({ children }: { children: ReactNode }) {
       // Fetch policies for the effective user (admin's ID for team members, own ID for regular users)
       const data = await policyService.getPolicies(effectiveUserId);
       
-      setPolicies(data);
+      // Sub agents only see their own policies
+      if (isSubAgent && subAgent) {
+        const filtered = data.filter(p => p.subAgentId === subAgent.id || p.sub_agent_id === subAgent.id);
+        setPolicies(filtered);
+      } else {
+        setPolicies(data);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch policies';
       setError(errorMessage);

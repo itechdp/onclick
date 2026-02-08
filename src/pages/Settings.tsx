@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Plus, Edit2, Trash2, Save, X, Building2, FileText, Package, Search, Download } from 'lucide-react';
+import { Settings as SettingsIcon, Plus, Edit2, Trash2, Save, X, Building2, FileText, Package, Search, Download, Megaphone, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { policySettingsService, PolicySetting } from '../services/policySettingsService';
+import { adminNotificationService } from '../services/adminNotificationService';
+import { useAuth } from '../context/AuthContext';
 import { DEFAULT_INSURANCE_COMPANIES, DEFAULT_PRODUCT_TYPES, DEFAULT_LOBS } from '../constants/policyDropdowns';
 
 type Category = 'insurance_company' | 'product_type' | 'lob';
@@ -19,6 +21,7 @@ const CATEGORY_ICONS = {
 };
 
 export function Settings() {
+  const { user, effectiveUserId } = useAuth();
   const [settings, setSettings] = useState<Record<Category, PolicySetting[]>>({
     insurance_company: [],
     product_type: [],
@@ -33,6 +36,12 @@ export function Settings() {
   const [adding, setAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Admin broadcast notification
+  const [notificationText, setNotificationText] = useState('');
+  const [currentNotification, setCurrentNotification] = useState<string | null>(null);
+  const [savingNotification, setSavingNotification] = useState(false);
+  const isAdmin = user?.role === 'admin';
+
   const DEFAULT_VALUES = {
     insurance_company: DEFAULT_INSURANCE_COMPANIES,
     product_type: DEFAULT_PRODUCT_TYPES,
@@ -41,7 +50,61 @@ export function Settings() {
 
   useEffect(() => {
     loadSettings();
+    if (isAdmin && effectiveUserId) {
+      loadNotification();
+    }
   }, []);
+
+  const loadNotification = async () => {
+    if (!effectiveUserId) return;
+    try {
+      const notification = await adminNotificationService.getActiveNotification();
+      if (notification) {
+        setCurrentNotification(notification.message);
+        setNotificationText(notification.message);
+      }
+    } catch (error) {
+      console.error('Error loading notification:', error);
+    }
+  };
+
+  const handleSaveNotification = async () => {
+    if (!effectiveUserId) return;
+    try {
+      setSavingNotification(true);
+      if (notificationText.trim()) {
+        await adminNotificationService.setNotification(effectiveUserId, notificationText.trim());
+        setCurrentNotification(notificationText.trim());
+        toast.success('Notification sent to all users!');
+      } else {
+        await adminNotificationService.clearNotification(effectiveUserId);
+        setCurrentNotification(null);
+        setNotificationText('');
+        toast.success('Notification cleared');
+      }
+    } catch (error) {
+      console.error('Error saving notification:', error);
+      toast.error('Failed to save notification');
+    } finally {
+      setSavingNotification(false);
+    }
+  };
+
+  const handleClearNotification = async () => {
+    if (!effectiveUserId) return;
+    try {
+      setSavingNotification(true);
+      await adminNotificationService.clearNotification(effectiveUserId);
+      setCurrentNotification(null);
+      setNotificationText('');
+      toast.success('Notification cleared');
+    } catch (error) {
+      console.error('Error clearing notification:', error);
+      toast.error('Failed to clear notification');
+    } finally {
+      setSavingNotification(false);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -281,6 +344,48 @@ export function Settings() {
             </button>
           </div>
         </div>
+
+        {/* Admin Broadcast Notification */}
+        {isAdmin && (
+          <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Megaphone className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h3 className="font-semibold text-gray-900 dark:text-white">Broadcast Notification</h3>
+              <span className="text-xs text-gray-500 dark:text-gray-400">— shown to all your users at the top of the portal</span>
+            </div>
+            {currentNotification && (
+              <div className="mb-3 p-3 bg-blue-100 dark:bg-blue-900/40 rounded-lg text-sm text-blue-800 dark:text-blue-200 flex items-center justify-between">
+                <span><strong>Current:</strong> {currentNotification}</span>
+                <button
+                  onClick={handleClearNotification}
+                  disabled={savingNotification}
+                  className="ml-3 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs font-medium"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={notificationText}
+                onChange={(e) => setNotificationText(e.target.value)}
+                placeholder="Type a message to broadcast to all users..."
+                className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm"
+                maxLength={300}
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveNotification()}
+              />
+              <button
+                onClick={handleSaveNotification}
+                disabled={savingNotification || (!notificationText.trim() && !currentNotification)}
+                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 text-sm font-medium"
+              >
+                <Send className="w-4 h-4" />
+                {savingNotification ? 'Saving...' : currentNotification ? 'Update' : 'Send'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Category Tabs */}
         <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">

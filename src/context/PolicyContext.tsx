@@ -48,7 +48,6 @@ export function PolicyProvider({ children }: { children: ReactNode }) {
         return;
       }
       
-      console.log('Fetching policies for effectiveUserId:', effectiveUserId);
       // Fetch policies for the effective user (admin's ID for team members, own ID for regular users)
       const data = await policyService.getPolicies(effectiveUserId);
       

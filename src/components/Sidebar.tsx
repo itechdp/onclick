@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Plus, Bell, User, LogOut, Moon, Sun, Menu, X, Home, FileText, CheckSquare, Clock, XCircle, DollarSign, Activity, RotateCcw, HelpCircle, Percent, Users, Crown, UserCircle, FolderOpen, UserPlus, UsersRound, Lightbulb, Settings as SettingsIcon } from 'lucide-react';
+import { Plus, Bell, User, LogOut, Moon, Sun, Menu, X, Home, FileText, CheckSquare, Clock, XCircle, DollarSign, Activity, RotateCcw, HelpCircle, Percent, Users, Crown, UserCircle, FolderOpen, UserPlus, UsersRound, Lightbulb, Settings as SettingsIcon, Gift } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import toast from 'react-hot-toast';
@@ -33,6 +33,7 @@ export function Sidebar() {
     { path: '/dashboard', label: 'Dashboard', icon: Home },
     { path: '/client-folders', label: 'Client Folders', icon: FolderOpen },
     { path: '/customers', label: 'Customers', icon: Users },
+    { path: '/birthdays-anniversaries', label: 'Celebrations', icon: Gift },
     { path: '/leads', label: 'Leads', icon: UserPlus },
     { path: '/group-heads', label: 'Group Heads', icon: UsersRound },
     { path: '/sub-agents', label: 'Sub Agents', icon: UserPlus },

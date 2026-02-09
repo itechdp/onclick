@@ -25,6 +25,7 @@ import { SubscriptionPage } from './pages/SubscriptionPage';
 import { Profile } from './pages/Profile';
 import { ClientFolders } from './pages/ClientFolders';
 import { Customers } from './pages/Customers';
+import { BirthdaysAnniversaries } from './pages/BirthdaysAnniversaries';
 import { LeadsManagement } from './pages/LeadsManagement';
 import { LeadsDashboard } from './pages/LeadsDashboard';
 import { FollowUpLeads } from './pages/FollowUpLeads';
@@ -64,6 +65,7 @@ function App() {
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="client-folders" element={<ClientFolders />} />
                   <Route path="customers" element={<Customers />} />
+                  <Route path="birthdays-anniversaries" element={<BirthdaysAnniversaries />} />
                   <Route path="leads" element={<LeadsManagement />} />
                   <Route path="leads-dashboard" element={<LeadsDashboard />} />
                   <Route path="follow-up-leads" element={<FollowUpLeads />} />

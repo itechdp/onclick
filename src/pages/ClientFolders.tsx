@@ -45,29 +45,27 @@ export function ClientFolders() {
     try {
       setLoading(true);
       const folders = await getClientFolders(effectiveUserId);
-      
-      // Sub agents: only show folders for their own policies
-      if (isSubAgent && subAgent) {
-        const subAgentPolicyholders = new Set(
-          subAgentPolicies.map(p => (p.policyholderName || '').toLowerCase())
-        );
-        const filtered = folders.filter(f => 
-          subAgentPolicyholders.has((f.policyholderName || '').toLowerCase())
-        );
-        setClientFolders(filtered);
-      } else {
-        setClientFolders(folders);
-      }
+      setClientFolders(folders);
     } catch (error) {
       console.error('Error loading client folders:', error);
       toast.error('Failed to load client folders');
     } finally {
       setLoading(false);
     }
-  }, [effectiveUserId, isSubAgent, subAgent, subAgentPolicies]);
+  }, [effectiveUserId]);
 
   const filterFolders = useCallback(() => {
     let filtered = [...clientFolders];
+
+    // Sub agents: only show folders for their own policies
+    if (isSubAgent && subAgent) {
+      const subAgentPolicyholders = new Set(
+        subAgentPolicies.map(p => (p.policyholderName || '').toLowerCase())
+      );
+      filtered = filtered.filter(f => 
+        subAgentPolicyholders.has((f.policyholderName || '').toLowerCase())
+      );
+    }
 
     // Filter by search query
     if (searchQuery.trim()) {
@@ -87,7 +85,7 @@ export function ClientFolders() {
     }
 
     setFilteredFolders(filtered);
-  }, [searchQuery, onlyWithDocuments, clientFolders]);
+  }, [searchQuery, onlyWithDocuments, clientFolders, isSubAgent, subAgent, subAgentPolicies]);
 
   useEffect(() => {
     loadClientFolders();

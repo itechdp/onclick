@@ -7,4 +7,12 @@ export { markPolicyAsLapsed, getLapsedPolicies, getLapsedPolicyById, removeLapse
 export { razorpayService } from './razorpayService';
 export { supabaseAuthService } from './supabaseAuthService';
 export { taskService } from './taskService';
-
+export { 
+  fetchCustomers, 
+  createCustomer, 
+  updateCustomer, 
+  deleteCustomer, 
+  findOrCreateCustomerFromPolicy,
+  getUpcomingBirthdays,
+  getUpcomingAnniversaries 
+} from './customerService';

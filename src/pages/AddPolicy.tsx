@@ -10,6 +10,7 @@ import { UpgradeModal } from '../components/UpgradeModal';
 import { storageService } from '../services/storageService';
 import { policySettingsService } from '../services/policySettingsService';
 import { DEFAULT_INSURANCE_COMPANIES, DEFAULT_PRODUCT_TYPES } from '../constants/policyDropdowns';
+import { findOrCreateCustomerFromPolicy } from '../services/customerService';
 import toast from 'react-hot-toast';
 
 // Configuration constants
@@ -1276,6 +1277,18 @@ export function AddPolicy() {
 
       // Add policy (no longer need to track policyId since files are already in correct location)
       await addPolicy(policyData);
+      
+      // Automatically create or link customer from policy data
+      try {
+        await findOrCreateCustomerFromPolicy(
+          formData.policyholderName.trim(),
+          formData.contactNo,
+          formData.emailId
+        );
+      } catch (error) {
+        console.error('Error creating customer from policy:', error);
+        // Don't fail the policy creation if customer creation fails
+      }
       
       // Handle multi-file mode: stay on page and process next file
       if (isMultiFileMode && currentFileIndex < selectedFiles.length - 1) {

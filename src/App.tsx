@@ -24,6 +24,7 @@ import { PricingPlans } from './pages/PricingPlans';
 import { SubscriptionPage } from './pages/SubscriptionPage';
 import { Profile } from './pages/Profile';
 import { ClientFolders } from './pages/ClientFolders';
+import { Customers } from './pages/Customers';
 import { LeadsManagement } from './pages/LeadsManagement';
 import { LeadsDashboard } from './pages/LeadsDashboard';
 import { FollowUpLeads } from './pages/FollowUpLeads';
@@ -62,6 +63,7 @@ function App() {
                   <Route path="policies" element={<Policies />} />
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="client-folders" element={<ClientFolders />} />
+                  <Route path="customers" element={<Customers />} />
                   <Route path="leads" element={<LeadsManagement />} />
                   <Route path="leads-dashboard" element={<LeadsDashboard />} />
                   <Route path="follow-up-leads" element={<FollowUpLeads />} />

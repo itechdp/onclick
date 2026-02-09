@@ -32,6 +32,7 @@ export function Sidebar() {
     { path: '/', label: 'Policies', icon: FileText },
     { path: '/dashboard', label: 'Dashboard', icon: Home },
     { path: '/client-folders', label: 'Client Folders', icon: FolderOpen },
+    { path: '/customers', label: 'Customers', icon: Users },
     { path: '/leads', label: 'Leads', icon: UserPlus },
     { path: '/group-heads', label: 'Group Heads', icon: UsersRound },
     { path: '/sub-agents', label: 'Sub Agents', icon: UserPlus },

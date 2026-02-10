@@ -11,6 +11,7 @@ import { storageService } from '../services/storageService';
 import { policySettingsService } from '../services/policySettingsService';
 import { DEFAULT_INSURANCE_COMPANIES, DEFAULT_PRODUCT_TYPES } from '../constants/policyDropdowns';
 import { findOrCreateCustomerFromPolicy } from '../services/customerService';
+import { aiUploadLimitService, AIQuotaStatus } from '../services/aiUploadLimitService';
 import toast from 'react-hot-toast';
 
 // Configuration constants
@@ -98,6 +99,10 @@ export function AddPolicy() {
   const [subAgents, setSubAgents] = useState<Array<{id: string, name: string}>>([]);
   const [isLoadingSubAgents, setIsLoadingSubAgents] = useState(true);
   
+  // AI Quota tracking state
+  const [aiQuota, setAiQuota] = useState<AIQuotaStatus | null>(null);
+  const [isLoadingQuota, setIsLoadingQuota] = useState(true);
+  
   // Upgrade modal state
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
@@ -175,6 +180,25 @@ export function AddPolicy() {
 
     if (user) {
       fetchSubAgents();
+    }
+  }, [user]);
+
+  // Fetch AI quota on component mount
+  useEffect(() => {
+    const fetchAIQuota = async () => {
+      try {
+        setIsLoadingQuota(true);
+        const quota = await aiUploadLimitService.getUserAIQuota(user!.id);
+        setAiQuota(quota);
+      } catch (error) {
+        console.error('Error fetching AI quota:', error);
+      } finally {
+        setIsLoadingQuota(false);
+      }
+    };
+
+    if (user) {
+      fetchAIQuota();
     }
   }, [user]);
 
@@ -1038,6 +1062,33 @@ export function AddPolicy() {
       const { extractedData, additionalData } = await extractDataWithAI(file);
       debugLog('🎉 AI extraction completed successfully!');
       
+      // Check if extraction returned meaningful data (>= 1 field)
+      const extractedFieldsCount = Object.values(extractedData).filter(val => val && String(val).trim().length > 0).length;
+      debugLog('📊 Extracted fields with data:', extractedFieldsCount);
+      
+      // Record upload ONLY if webhook returned data with >= 1 field
+      if (extractedFieldsCount >= 1 && user) {
+        try {
+          const recordResult = await aiUploadLimitService.recordSuccessfulAIUpload(user.id);
+          if (recordResult.success) {
+            debugLog('✅ Upload recorded successfully. Remaining:', recordResult.remaining);
+            toast.success(`✓ Upload recorded. ${recordResult.remaining} remaining this month`, { 
+              id: 'upload-recorded',
+              duration: 2000 
+            });
+            // Refresh quota to update progress bar
+            await refreshAIQuota();
+          } else {
+            debugLog('⚠️ Upload not recorded:', recordResult.message);
+          }
+        } catch (error) {
+          debugLog('⚠️ Error recording upload:', error);
+          // Don't fail the extraction if recording fails
+        }
+      } else {
+        debugLog('ℹ️ Upload not counted - webhook returned < 1 field with data');
+      }
+      
       // Auto-fill form with extracted data from n8n
       debugLog('📝 Auto-filling form with n8n extracted data...');
       
@@ -1191,6 +1242,18 @@ export function AddPolicy() {
     setUploadedFile(null);
   };
 
+  // Refresh AI quota after successful operations
+  const refreshAIQuota = async () => {
+    try {
+      if (user) {
+        const updatedQuota = await aiUploadLimitService.getUserAIQuota(user.id);
+        setAiQuota(updatedQuota);
+      }
+    } catch (error) {
+      console.error('Error refreshing AI quota:', error);
+    }
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -1277,6 +1340,9 @@ export function AddPolicy() {
 
       // Add policy (no longer need to track policyId since files are already in correct location)
       await addPolicy(policyData);
+      
+        // Refresh AI quota after successful upload
+        await refreshAIQuota();
       
       // Automatically create or link customer from policy data
       try {
@@ -1597,6 +1663,33 @@ export function AddPolicy() {
                   </svg>
                   <span className="font-medium">Maximum {MAX_FILES_LIMIT} files allowed</span> - to prevent AI overloading and ensure optimal processing speed
                 </p>
+              </div>
+
+              {/* AI Quota Counter - Super Minimal */}
+              <div className="mb-4">
+                <div className="text-right mb-1">
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                    {isLoadingQuota ? (
+                      <span className="animate-pulse">...</span>
+                    ) : aiQuota ? (
+                      `${aiQuota.uploads_used}/${aiQuota.monthly_limit}`
+                    ) : (
+                      '0/0'
+                    )}
+                  </span>
+                </div>
+                {!isLoadingQuota && aiQuota && (
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-purple-600 h-full transition-all duration-500 rounded-full"
+                      style={{
+                        width: aiQuota.monthly_limit > 0 
+                          ? `${Math.min(100, (aiQuota.uploads_used / aiQuota.monthly_limit) * 100)}%` 
+                          : '0%'
+                      }}
+                    />
+                  </div>
+                )}
               </div>
               
               <div className="flex items-center flex-wrap gap-4">

@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { razorpayService, SubscriptionPlan } from '../services/razorpayService';
+import { SubscriptionPlan } from '../services/razorpayService';
 import toast from 'react-hot-toast';
 import { Check, Loader2, Sparkles, Zap, Crown, Star, ChevronDown } from 'lucide-react';
 
@@ -106,27 +106,8 @@ const allFeatures = [
 export function PricingPlans() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [expandedPlans, setExpandedPlans] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    loadPlans();
-  }, []);
-
-  const loadPlans = async () => {
-    try {
-      setLoading(true);
-      const fetchedPlans = await razorpayService.getSubscriptionPlans();
-      setPlans(fetchedPlans);
-    } catch (error) {
-      console.error('Error loading plans:', error);
-      toast.error('Failed to load subscription plans');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubscribe = async (plan: SubscriptionPlan) => {
     // Check if user is logged in
@@ -243,7 +224,7 @@ export function PricingPlans() {
 
   const isRecommended = (planName: string) => planName === 'standard';
 
-  if (loading || authLoading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">

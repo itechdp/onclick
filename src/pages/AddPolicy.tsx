@@ -1668,7 +1668,11 @@ export function AddPolicy() {
               {/* AI Quota Counter - Super Minimal */}
               <div className="mb-4">
                 <div className="text-right mb-1">
-                  <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                  <span className={`text-sm font-bold ${
+                    aiQuota && aiQuota.monthly_limit > 0 && aiQuota.uploads_used >= aiQuota.monthly_limit
+                      ? 'text-red-600 dark:text-red-400'
+                      : 'text-gray-700 dark:text-gray-300'
+                  }`}>
                     {isLoadingQuota ? (
                       <span className="animate-pulse">...</span>
                     ) : aiQuota ? (
@@ -1681,7 +1685,11 @@ export function AddPolicy() {
                 {!isLoadingQuota && aiQuota && (
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
                     <div
-                      className="bg-gradient-to-r from-blue-500 to-purple-600 h-full transition-all duration-500 rounded-full"
+                      className={`h-full transition-all duration-500 rounded-full ${
+                        aiQuota.monthly_limit > 0 && aiQuota.uploads_used >= aiQuota.monthly_limit
+                          ? 'bg-gradient-to-r from-red-500 to-red-600'
+                          : 'bg-gradient-to-r from-blue-500 to-purple-600'
+                      }`}
                       style={{
                         width: aiQuota.monthly_limit > 0 
                           ? `${Math.min(100, (aiQuota.uploads_used / aiQuota.monthly_limit) * 100)}%` 
@@ -1705,6 +1713,32 @@ export function AddPolicy() {
                     </div>
                     <Upload className="h-5 w-5 mr-2" />
                     Upload PDF(s) for AI Analysis
+                  </button>
+                ) : aiQuota && aiQuota.monthly_limit > 0 && aiQuota.uploads_used >= aiQuota.monthly_limit ? (
+                  // AI Limit Reached - Disabled Button
+                  <button
+                    type="button"
+                    onClick={() => toast.error('Monthly AI limit reached! Resets on 1st of next month.')}
+                    className="relative flex items-center px-6 py-3 bg-gray-400 dark:bg-gray-600 text-white rounded-lg transition-all duration-200 cursor-not-allowed shadow-lg opacity-75"
+                  >
+                    <div className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 shadow-md">
+                      <Lock className="h-4 w-4 text-white" />
+                    </div>
+                    <Upload className="h-5 w-5 mr-2" />
+                    AI Limit Reached ({aiQuota.uploads_used}/{aiQuota.monthly_limit})
+                  </button>
+                ) : aiQuota && aiQuota.monthly_limit === 0 ? (
+                  // No AI in plan - Disabled Button
+                  <button
+                    type="button"
+                    onClick={() => setShowUpgradeModal(true)}
+                    className="relative flex items-center px-6 py-3 bg-gray-400 dark:bg-gray-600 text-white rounded-lg transition-all duration-200 cursor-not-allowed shadow-lg opacity-75"
+                  >
+                    <div className="absolute -top-2 -right-2 bg-yellow-500 rounded-full p-1 shadow-md">
+                      <Lock className="h-4 w-4 text-white" />
+                    </div>
+                    <Upload className="h-5 w-5 mr-2" />
+                    Upgrade for AI Features
                   </button>
                 ) : (
                   <label className={`flex items-center px-6 py-3 ${

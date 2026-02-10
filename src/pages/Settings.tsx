@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Plus, Edit2, Trash2, Save, X, Building2, FileText, Package, Search, Download, Megaphone, Send } from 'lucide-react';
+import { useState, useEffect, type ChangeEvent } from 'react';
+import { Settings as SettingsIcon, Plus, Edit2, Trash2, Save, X, Building2, FileText, Package, Search, Download, Megaphone, Send, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { policySettingsService, PolicySetting } from '../services/policySettingsService';
 import { adminNotificationService } from '../services/adminNotificationService';
 import { useAuth } from '../context/AuthContext';
 import { DEFAULT_INSURANCE_COMPANIES, DEFAULT_PRODUCT_TYPES, DEFAULT_LOBS } from '../constants/policyDropdowns';
+import { logoService } from '../services/logoService';
 
 type Category = 'insurance_company' | 'product_type' | 'lob';
 
@@ -35,6 +36,9 @@ export function Settings() {
   const [newValue, setNewValue] = useState('');
   const [adding, setAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoRemoving, setLogoRemoving] = useState(false);
 
   // Admin broadcast notification
   const [notificationText, setNotificationText] = useState('');
@@ -54,6 +58,13 @@ export function Settings() {
       loadNotification();
     }
   }, []);
+
+  useEffect(() => {
+    if (!effectiveUserId) return;
+    logoService.getUserLogoUrl(effectiveUserId)
+      .then(url => setLogoUrl(url))
+      .catch(() => setLogoUrl(null));
+  }, [effectiveUserId]);
 
   const loadNotification = async () => {
     if (!effectiveUserId) return;
@@ -314,6 +325,42 @@ export function Settings() {
     defaultValue => !currentSettings.some(s => s.value === defaultValue)
   );
 
+  const handleLogoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    if (!effectiveUserId) return;
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setLogoUploading(true);
+      const result = await logoService.uploadUserLogo(file, effectiveUserId);
+      if (result) {
+        setLogoUrl(result.url);
+        toast.success('Logo uploaded successfully');
+      }
+    } finally {
+      setLogoUploading(false);
+      event.currentTarget.value = '';
+    }
+  };
+
+  const handleLogoRemove = async () => {
+    if (!effectiveUserId) return;
+    if (!confirm('Remove your logo?')) return;
+
+    try {
+      setLogoRemoving(true);
+      const ok = await logoService.deleteUserLogos(effectiveUserId);
+      if (ok) {
+        setLogoUrl(null);
+        toast.success('Logo removed');
+      } else {
+        toast.error('Failed to remove logo');
+      }
+    } finally {
+      setLogoRemoving(false);
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -386,6 +433,48 @@ export function Settings() {
             </div>
           </div>
         )}
+
+        {/* Branding - User Logo */}
+        <div className="mb-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <ImageIcon className="w-5 h-5 text-purple-600" />
+            <h3 className="font-semibold text-gray-900 dark:text-white">Branding</h3>
+            <span className="text-xs text-gray-500 dark:text-gray-400">— add your logo for print headers</span>
+          </div>
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-28 h-20 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 flex items-center justify-center overflow-hidden">
+                {logoUrl ? (
+                  <img src={logoUrl} alt="User Logo" className="max-h-full max-w-full object-contain" />
+                ) : (
+                  <span className="text-xs text-gray-500">No logo</span>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Upload Logo (PNG/JPG/SVG/WEBP)
+                </label>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                  onChange={handleLogoUpload}
+                  disabled={logoUploading}
+                  className="block text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:py-2 file:px-4 file:border-0 file:rounded-md file:bg-purple-600 file:text-white hover:file:bg-purple-700 disabled:opacity-60"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Max size 2MB. Stored in Supabase bucket: logos.</p>
+              </div>
+            </div>
+            <div className="md:ml-auto">
+              <button
+                onClick={handleLogoRemove}
+                disabled={!logoUrl || logoRemoving}
+                className="px-4 py-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 border border-red-300 dark:border-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {logoRemoving ? 'Removing...' : 'Remove Logo'}
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Category Tabs */}
         <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">

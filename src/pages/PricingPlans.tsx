@@ -3,9 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { razorpayService, SubscriptionPlan } from '../services/razorpayService';
 import toast from 'react-hot-toast';
-import { Check, Loader2, Sparkles, Zap, Crown, Star } from 'lucide-react';
+import { Check, Loader2, Sparkles, Zap, Crown, Star, ChevronDown } from 'lucide-react';
 
-// Starter plan - hardcoded (not from DB)
+// Essential plan - ₹199 (no AI Policy Upload)
+const essentialPlan: SubscriptionPlan = {
+  id: 'essential-plan',
+  name: 'essential',
+  displayName: 'Essential',
+  description: 'Essential plan without AI Policy Upload',
+  priceInr: 199,
+  currency: 'INR',
+  durationDays: 30,
+  features: [],
+  isActive: true,
+};
+
+// Starter plan - ₹499 (hardcoded - not from DB)
 const starterPlan: SubscriptionPlan = {
   id: 'starter-plan',
   name: 'starter',
@@ -18,8 +31,48 @@ const starterPlan: SubscriptionPlan = {
   isActive: true,
 };
 
+// Basic plan - ₹799
+const basicPlan: SubscriptionPlan = {
+  id: 'basic-plan',
+  name: 'basic',
+  displayName: 'Basic',
+  description: 'Basic plan with enhanced features',
+  priceInr: 799,
+  currency: 'INR',
+  durationDays: 30,
+  features: [],
+  isActive: true,
+};
+
+// Standard plan - ₹1499
+const standardPlan: SubscriptionPlan = {
+  id: 'standard-plan',
+  name: 'standard',
+  displayName: 'Standard',
+  description: 'Standard plan for professional use',
+  priceInr: 1499,
+  currency: 'INR',
+  durationDays: 30,
+  features: [],
+  isActive: true,
+};
+
+// Premium plan - ₹2499
+const premiumPlan: SubscriptionPlan = {
+  id: 'premium-plan',
+  name: 'premium',
+  displayName: 'Premium',
+  description: 'Premium plan for enterprise users',
+  priceInr: 2499,
+  currency: 'INR',
+  durationDays: 30,
+  features: [],
+  isActive: true,
+};
+
 // All features provided across all plans
 const planSpecificFeature: Record<string, string> = {
+  essential: '❌ No AI Policy Upload',
   starter: 'AI Policy Upload 25/Monthly',
   basic: 'AI Policy Upload 100/Monthly',
   standard: 'AI Policy Upload 300/Monthly',
@@ -56,6 +109,7 @@ export function PricingPlans() {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
+  const [expandedPlans, setExpandedPlans] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadPlans();
@@ -151,6 +205,8 @@ export function PricingPlans() {
 
   const getPlanIcon = (planName: string) => {
     switch (planName) {
+      case 'essential':
+        return <Star className="w-8 h-8" />;
       case 'starter':
         return <Star className="w-8 h-8" />;
       case 'basic':
@@ -168,6 +224,8 @@ export function PricingPlans() {
 
   const getPlanColor = (planName: string) => {
     switch (planName) {
+      case 'essential':
+        return 'from-cyan-500 to-cyan-600';
       case 'starter':
         return 'from-gray-500 to-gray-600';
       case 'basic':
@@ -212,11 +270,11 @@ export function PricingPlans() {
         {/* Pricing Cards */}
         {/* Enterprise plan hidden - uncomment the filter below to show it again */}
         {/* To restore: remove the .filter() below */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {[starterPlan, ...plans.filter(plan => plan.name !== 'enterprise')].map((plan) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-12">
+          {[essentialPlan, starterPlan, basicPlan, standardPlan, premiumPlan].map((plan) => (
             <div
               key={plan.id}
-              className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transition-transform hover:scale-105 ${
+              className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transition-transform hover:scale-105 flex flex-col ${
                 isRecommended(plan.name) ? 'ring-4 ring-green-500' : ''
               }`}
             >
@@ -233,6 +291,12 @@ export function PricingPlans() {
                   {getPlanIcon(plan.name)}
                   {plan.name !== 'enterprise' && (
                     <div className="text-right">
+                      {plan.name === 'essential' && (
+                        <>
+                          <div className="text-2xl font-bold line-through opacity-70">₹399</div>
+                          <div className="text-xs font-semibold bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full inline-block mb-1">LIMITED TIME OFFER</div>
+                        </>
+                      )}
                       {plan.name === 'starter' && (
                         <>
                           <div className="text-2xl font-bold line-through opacity-70">₹999</div>
@@ -267,27 +331,56 @@ export function PricingPlans() {
               </div>
 
               {/* Features List */}
-              <div className="p-8">
-                <ul className="space-y-4 mb-8">
+              <div className="p-8 flex-grow flex flex-col">
+                <ul className="space-y-3 mb-6">
                   {planSpecificFeature[plan.name] && (
                     <li className="flex items-start">
-                      <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-700 dark:text-gray-300 font-semibold">{planSpecificFeature[plan.name]}</span>
+                      {plan.name === 'essential' ? (
+                        <span className="text-red-600 dark:text-red-400 font-semibold text-lg mr-3 flex-shrink-0">{planSpecificFeature[plan.name]}</span>
+                      ) : (
+                        <>
+                          <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
+                          <span className="text-gray-700 dark:text-gray-300 font-semibold">{planSpecificFeature[plan.name]}</span>
+                        </>
+                      )}
                     </li>
                   )}
-                  {allFeatures.map((feature, index) => (
+                  {allFeatures.slice(0, 5).map((feature, index) => (
                     <li key={index} className="flex items-start">
                       <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-700 dark:text-gray-300">{feature}</span>
+                      <span className="text-gray-700 dark:text-gray-300 text-sm">{feature}</span>
+                    </li>
+                  ))}
+                  {expandedPlans.has(plan.id) && allFeatures.slice(5).map((feature, index) => (
+                    <li key={index + 5} className="flex items-start">
+                      <Check className="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
+                      <span className="text-gray-700 dark:text-gray-300 text-sm">{feature}</span>
                     </li>
                   ))}
                 </ul>
+                {allFeatures.length > 5 && (
+                  <button
+                    onClick={() => {
+                      const newExpanded = new Set(expandedPlans);
+                      if (newExpanded.has(plan.id)) {
+                        newExpanded.delete(plan.id);
+                      } else {
+                        newExpanded.add(plan.id);
+                      }
+                      setExpandedPlans(newExpanded);
+                    }}
+                    className="flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 font-semibold mb-4 text-sm"
+                  >
+                    {expandedPlans.has(plan.id) ? 'Show Less' : 'Show More'}
+                    <ChevronDown className={`w-4 h-4 transition-transform ${expandedPlans.has(plan.id) ? 'rotate-180' : ''}`} />
+                  </button>
+                )}
 
                 {/* Subscribe Button */}
                 <button
                   onClick={() => plan.name === 'enterprise' ? window.location.href = 'mailto:support@demopolicymanager.com?subject=Enterprise Plan Inquiry' : handleSubscribe(plan)}
                   disabled={processingPlan === plan.name}
-                  className={`w-full py-4 px-6 rounded-lg font-semibold text-white transition-all ${
+                  className={`mt-auto w-full py-4 px-6 rounded-lg font-semibold text-white transition-all ${
                     processingPlan === plan.name
                       ? 'bg-gray-400 cursor-not-allowed'
                       : plan.name === 'enterprise'

@@ -87,7 +87,7 @@ BEGIN
   VALUES (p_user_id, v_month_year, v_monthly_limit, 0, v_plan_int)
   ON CONFLICT (user_id, month_year) 
   DO UPDATE SET monthly_limit = v_monthly_limit
-  RETURNING user_id, month_year, monthly_limit, upload_count;
+  RETURNING ai_policy_uploads.user_id, ai_policy_uploads.month_year, ai_policy_uploads.monthly_limit, ai_policy_uploads.upload_count;
 END;
 $$ LANGUAGE plpgsql;
 

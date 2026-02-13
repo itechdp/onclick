@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Policy } from '../types';
 import { X, Save, Calendar, User, FileText, DollarSign, Phone, Car, Hash } from 'lucide-react';
 
@@ -10,40 +10,56 @@ interface EditPolicyModalProps {
 }
 
 export function EditPolicyModal({ policy, isOpen, onClose, onSave }: EditPolicyModalProps) {
-  const [formData, setFormData] = useState<Partial<Policy>>({
-    policyholderName: policy.policyholderName,
-    policyType: policy.policyType,
-    insuranceCompany: policy.insuranceCompany,
-    policyNumber: policy.policyNumber,
-    startDate: policy.startDate,
-    expiryDate: policy.expiryDate,
-    premiumAmount: policy.premiumAmount,
-    businessType: policy.businessType || 'New',
-    contactNo: policy.contactNo || '',
-    emailId: policy.emailId || '',
-    registrationNo: policy.registrationNo || '',
-    engineNo: policy.engineNo || '',
-    chasisNo: policy.chasisNo || '',
-    hp: policy.hp || '',
-    riskLocationAddress: policy.riskLocationAddress || '',
-    idv: policy.idv || '',
-    netPremium: policy.netPremium || '',
-    gst: policy.gst || '',
-    totalPremium: policy.totalPremium || '',
-    remark: policy.remark || '',
-    productType: policy.productType || '',
-    referenceFromName: policy.referenceFromName || '',
-    isOneTimePolicy: policy.isOneTimePolicy || false,
-    ncbPercentage: policy.ncbPercentage || '',
-    isRenewed: policy.isRenewed || false,
-    lastClaimDate: policy.lastClaimDate || '',
-    lastClaimAmount: policy.lastClaimAmount || '',
-    hasClaimLastYear: policy.hasClaimLastYear || false,
-    documentsFolderLink: policy.documentsFolderLink || '',
-    driveFileUrl: policy.driveFileUrl || '',
+  const normalizeDateForInput = (value?: string | Date) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().split('T')[0];
+  };
+
+  const buildInitialFormData = (source: Policy): Partial<Policy> => ({
+    policyholderName: source.policyholderName,
+    policyType: source.policyType,
+    insuranceCompany: source.insuranceCompany,
+    policyNumber: source.policyNumber,
+    policyStartDate: normalizeDateForInput(source.policyStartDate ?? source.startDate),
+    policyEndDate: normalizeDateForInput(source.policyEndDate ?? source.expiryDate),
+    premiumAmount: source.premiumAmount,
+    businessType: source.businessType || 'New',
+    contactNo: source.contactNo || '',
+    emailId: source.emailId || '',
+    registrationNo: source.registrationNo || '',
+    engineNo: source.engineNo || '',
+    chasisNo: source.chasisNo || '',
+    hp: source.hp || '',
+    riskLocationAddress: source.riskLocationAddress || '',
+    idv: source.idv || '',
+    netPremium: source.netPremium || '',
+    gst: source.gst || '',
+    totalPremium: source.totalPremium || '',
+    remark: source.remark || '',
+    productType: source.productType || '',
+    referenceFromName: source.referenceFromName || '',
+    isOneTimePolicy: source.isOneTimePolicy || false,
+    ncbPercentage: source.ncbPercentage || '',
+    isRenewed: source.isRenewed || false,
+    lastClaimDate: source.lastClaimDate || '',
+    lastClaimAmount: source.lastClaimAmount || '',
+    hasClaimLastYear: source.hasClaimLastYear || false,
+    documentsFolderLink: source.documentsFolderLink || '',
+    driveFileUrl: source.driveFileUrl || '',
+    repeatReminder: source.repeatReminder || '',
   });
 
+  const [formData, setFormData] = useState<Partial<Policy>>(buildInitialFormData(policy));
+
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(buildInitialFormData(policy));
+    }
+  }, [policy, isOpen]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -51,6 +67,12 @@ export function EditPolicyModal({ policy, isOpen, onClose, onSave }: EditPolicyM
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => ({ ...prev, [name]: checked }));
+    } else if (name === 'policyType') {
+      setFormData(prev => ({
+        ...prev,
+        policyType: value,
+        repeatReminder: value === 'Life Insurance' ? prev.repeatReminder : ''
+      }));
     } else if (name === 'premiumAmount') {
       setFormData(prev => ({ ...prev, [name]: parseFloat(value) || 0 }));
     } else {
@@ -66,11 +88,20 @@ export function EditPolicyModal({ policy, isOpen, onClose, onSave }: EditPolicyM
     try {
       // Only send changed fields
       const changedFields: Record<string, unknown> = {};
+      const initialFormData = buildInitialFormData(policy);
+
       (Object.keys(formData) as Array<keyof Policy>).forEach(key => {
-        if (formData[key] !== policy[key]) {
+        if (formData[key] !== initialFormData[key]) {
           changedFields[key] = formData[key];
         }
       });
+
+      if (changedFields.policyStartDate !== undefined) {
+        changedFields.startDate = changedFields.policyStartDate;
+      }
+      if (changedFields.policyEndDate !== undefined) {
+        changedFields.expiryDate = changedFields.policyEndDate;
+      }
 
       if (Object.keys(changedFields).length > 0) {
         await onSave(changedFields as Partial<Policy>);
@@ -137,30 +168,30 @@ export function EditPolicyModal({ policy, isOpen, onClose, onSave }: EditPolicyM
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   >
                     <option value="">Select Policy Type</option>
-                    <option value="Life">Life Insurance</option>
-                    <option value="Health">Health Insurance</option>
-                    <option value="Vehicle">Vehicle Insurance</option>
-                    <option value="Motor">Motor Insurance</option>
-                    <option value="Property">Property Insurance</option>
-                    <option value="Fire">Fire Insurance</option>
-                    <option value="Marine">Marine Insurance</option>
-                    <option value="Travel">Travel Insurance</option>
-                    <option value="Liability">Liability Insurance</option>
-                    <option value="Engineering">Engineering Insurance</option>
-                    <option value="Agriculture">Agriculture Insurance</option>
-                    <option value="Credit">Credit Insurance</option>
-                    <option value="Miscellaneous">Miscellaneous Insurance</option>
-                    <option value="General">General Insurance</option>
-                    <option value="TW">Two Wheeler</option>
-                    <option value="FOUR WHEELER">Four Wheeler</option>
-                    <option value="MISC">Miscellaneous</option>
-                    <option value="GCV">Goods Carrying Vehicle</option>
-                    <option value="PCV">Passenger Carrying Vehicle</option>
-                    <option value="GHI">Group Health Insurance</option>
-                    <option value="GPA">Group Personal Accident</option>
-                    <option value="WC">Workmen's Compensation</option>
+                    <option value="General Insurance">General Insurance</option>
+                    <option value="Life Insurance">Life Insurance</option>
                   </select>
                 </div>
+
+                {formData.policyType === 'Life Insurance' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Repeat Reminder
+                    </label>
+                    <select
+                      name="repeatReminder"
+                      value={formData.repeatReminder || ''}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    >
+                      <option value="">Select Repeat Reminder</option>
+                      <option value="Monthly">Every Month</option>
+                      <option value="Quarterly">Every Quarter</option>
+                      <option value="Half-yearly">Every Half Year</option>
+                      <option value="Yearly">Every Year</option>
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -223,8 +254,8 @@ export function EditPolicyModal({ policy, isOpen, onClose, onSave }: EditPolicyM
                   </label>
                   <input
                     type="date"
-                    name="startDate"
-                    value={formData.startDate}
+                    name="policyStartDate"
+                    value={formData.policyStartDate ? String(formData.policyStartDate) : ''}
                     onChange={handleInputChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
@@ -237,8 +268,8 @@ export function EditPolicyModal({ policy, isOpen, onClose, onSave }: EditPolicyM
                   </label>
                   <input
                     type="date"
-                    name="expiryDate"
-                    value={formData.expiryDate}
+                    name="policyEndDate"
+                    value={formData.policyEndDate ? String(formData.policyEndDate) : ''}
                     onChange={handleInputChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"

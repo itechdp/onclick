@@ -15,24 +15,31 @@ class AIUploadLimitService {
   async getUserAIQuota(userId: string): Promise<AIQuotaStatus | null> {
     try {
       const { data, error } = await supabase
-        .rpc('get_user_ai_quota', { p_user_id: userId });
+        .from('users')
+        .select('ai_uploads_this_month, ai_uploads_monthly_limit, subscription_plan, ai_uploads_reset_date')
+        .eq('id', userId)
+        .single();
 
       if (error) {
         console.error('Error getting AI quota:', error);
         return null;
       }
 
-      if (!data || data.length === 0) {
+      if (!data) {
         return null;
       }
 
-      const row = data[0];
+      const uploadsUsed = data.ai_uploads_this_month ?? 0;
+      const monthlyLimit = data.ai_uploads_monthly_limit ?? 0;
+      const remainingUploads = Math.max(0, monthlyLimit - uploadsUsed);
+      const subscriptionPlan = parseInt(String(data.subscription_plan || 0), 10) || 0;
+
       return {
-        uploads_used: row.uploads_used || 0,
-        monthly_limit: row.monthly_limit || 0,
-        remaining_uploads: row.remaining_uploads || 0,
-        subscription_plan: row.subscription_plan || 199,
-        reset_date: row.reset_date || new Date().toISOString()
+        uploads_used: uploadsUsed,
+        monthly_limit: monthlyLimit,
+        remaining_uploads: remainingUploads,
+        subscription_plan: subscriptionPlan,
+        reset_date: data.ai_uploads_reset_date || new Date().toISOString()
       };
     } catch (error) {
       console.error('Error fetching AI quota:', error);

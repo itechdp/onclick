@@ -190,6 +190,7 @@ export function AddPolicy() {
       try {
         setIsLoadingQuota(true);
         const quota = await aiUploadLimitService.getUserAIQuota(user!.id);
+        console.log('AI quota fetched in AddPolicy:', quota);
         setAiQuota(quota);
       } catch (error) {
         console.error('Error fetching AI quota:', error);
@@ -1686,22 +1687,24 @@ export function AddPolicy() {
                     )}
                   </span>
                 </div>
-                {!isLoadingQuota && aiQuota && (
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-500 rounded-full ${
-                        aiQuota.monthly_limit > 0 && aiQuota.uploads_used >= aiQuota.monthly_limit
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 rounded-full ${
+                      isLoadingQuota
+                        ? 'bg-gray-300 dark:bg-gray-500 animate-pulse'
+                        : aiQuota && aiQuota.monthly_limit > 0 && aiQuota.uploads_used >= aiQuota.monthly_limit
                           ? 'bg-gradient-to-r from-red-500 to-red-600'
                           : 'bg-gradient-to-r from-blue-500 to-purple-600'
-                      }`}
-                      style={{
-                        width: aiQuota.monthly_limit > 0 
-                          ? `${Math.min(100, (aiQuota.uploads_used / aiQuota.monthly_limit) * 100)}%` 
+                    }`}
+                    style={{
+                      width: isLoadingQuota
+                        ? '30%'
+                        : aiQuota && aiQuota.monthly_limit > 0
+                          ? `${Math.min(100, (aiQuota.uploads_used / aiQuota.monthly_limit) * 100)}%`
                           : '0%'
-                      }}
-                    />
-                  </div>
-                )}
+                    }}
+                  />
+                </div>
               </div>
               
               <div className="flex items-center flex-wrap gap-4">

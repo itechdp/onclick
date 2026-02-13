@@ -16,6 +16,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
   const [shouldRedirect, setShouldRedirect] = useState(false);
+  const [authTimeout, setAuthTimeout] = useState(false);
+
+  useEffect(() => {
+    if (!loading) {
+      setAuthTimeout(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setAuthTimeout(true);
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loading]);
 
   useEffect(() => {
     const checkAccessAndSubscription = async () => {
@@ -113,6 +127,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (loading) {
     console.log('⏳ ProtectedRoute: Still loading auth...');
+    if (authTimeout) {
+      console.log('⏱️ ProtectedRoute: Auth load timed out, redirecting to login');
+      return <Navigate to="/login" replace />;
+    }
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
         <div className="text-center">

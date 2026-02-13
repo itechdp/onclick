@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePolicies } from '../context/PolicyContext';
 import { useAuth } from '../context/AuthContext';
 import { PolicyFormData, AIExtractedData, Policy } from '../types';
-import { FileText, User, Save, ArrowLeft, Upload, Sparkles, ToggleLeft, ToggleRight, Lock, X, ChevronDown } from 'lucide-react';
+import { FileText, User, Save, ArrowLeft, Upload, Sparkles, ToggleLeft, ToggleRight, Lock, X, ChevronDown, Bell } from 'lucide-react';
 import { getWebhookUrl, debugLog, config } from '../config/webhookConfig';
 import { UpgradeModal } from '../components/UpgradeModal';
 import { storageService } from '../services/storageService';
@@ -58,7 +58,8 @@ export function AddPolicy() {
     isOneTimePolicy: false,
     ncbPercentage: '',
     businessType: 'New',
-    memberOf: ''
+    memberOf: '',
+    repeatReminder: ''
   });
 
   const [productType, setProductType] = useState('');
@@ -1225,7 +1226,8 @@ export function AddPolicy() {
       isOneTimePolicy: false,
       ncbPercentage: '',
       businessType: 'New',
-      memberOf: ''
+      memberOf: '',
+      repeatReminder: ''
     });
     setProductType('');
     setUploadedFile(null);
@@ -1295,7 +1297,7 @@ export function AddPolicy() {
 
       const policyData = {
         policyholderName: formData.policyholderName.trim(),
-        policyType: 'General' as const, // Fixed as General Insurance
+        policyType: formData.policyType || 'General Insurance',
         insuranceCompany: formData.insuranceCompany || 'General Insurance Company',
         policyNumber: formData.policyNumber || `GEN-${Date.now()}`, // Use form data or auto-generated
         businessType: formData.businessType,
@@ -1332,6 +1334,7 @@ export function AddPolicy() {
         referenceFromName: formData.referenceFromName,
         isOneTimePolicy: formData.isOneTimePolicy,
         ncbPercentage: formData.ncbPercentage,
+        repeatReminder: formData.repeatReminder || undefined,
         // File information from Firebase Storage
         pdfFileName: formData.pdfFileName,
         fileId: formData.fileId,
@@ -1402,7 +1405,8 @@ export function AddPolicy() {
           isOneTimePolicy: false,
           ncbPercentage: '',
           businessType: 'New',
-          memberOf: ''
+          memberOf: '',
+          repeatReminder: ''
         });
         setProductType('');
         setUploadedFile(null);
@@ -1910,15 +1914,23 @@ export function AddPolicy() {
                 )}
               </div>
 
-              {/* Policy Type - Fixed as General Insurance */}
+              {/* Policy Type - Dropdown with General Insurance and Life Insurance */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="policyType" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   <FileText className="inline h-4 w-4 mr-1" />
-                  Policy Type
+                  Policy Type *
                 </label>
-                <div className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                  General Insurance
-                </div>
+                <select
+                  id="policyType"
+                  name="policyType"
+                  value={formData.policyType}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                >
+                  <option value="">Select Policy Type</option>
+                  <option value="General Insurance">General Insurance</option>
+                  <option value="Life Insurance">Life Insurance</option>
+                </select>
               </div>
               
               {/* Business Type - new, renewal and rollover */}
@@ -2525,6 +2537,32 @@ export function AddPolicy() {
                       placeholder="Enter any remarks or additional notes"
                     />
                   </div>
+
+                  {/* Repeat Reminder - Only for Life Insurance */}
+                  {formData.policyType === 'Life Insurance' && (
+                    <div className="md:col-span-2 lg:col-span-3">
+                      <label htmlFor="repeatReminder" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <Bell className="inline h-4 w-4 mr-1" />
+                        Repeat Reminder
+                      </label>
+                      <select
+                        id="repeatReminder"
+                        name="repeatReminder"
+                        value={formData.repeatReminder}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      >
+                        <option value="">No Reminder</option>
+                        <option value="Monthly">Every Month</option>
+                        <option value="Quarterly">Every Quarter</option>
+                        <option value="Half-yearly">Every Half Year</option>
+                        <option value="Yearly">Every Year</option>
+                      </select>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        Reminders will be sent from Start Date to End Date at the selected frequency
+                      </p>
+                    </div>
+                  )}
 
                   <div className="md:col-span-2 lg:col-span-3">
                     {/* Reference From Name */}

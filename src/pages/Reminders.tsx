@@ -5,7 +5,7 @@ import { usePolicies } from '../context/PolicyContext';
 import { useAuth } from '../context/AuthContext';
 import { Policy } from '../types';
 import { AlertTriangle, Calendar, Clock, Building, MessageCircle, FileX, Eye, RefreshCw, FileText, StickyNote, Printer } from 'lucide-react';
-import { format, differenceInDays, isAfter, isBefore, addDays } from 'date-fns';
+import { format, differenceInDays, isAfter, isBefore, addDays, addMonths, addQuarters, addYears } from 'date-fns';
 import toast from 'react-hot-toast';
 import { markPolicyAsLapsed } from '../services';
 import { supabase } from '../config/supabase';
@@ -34,8 +34,67 @@ const safeFormatDate = (dateValue: string | Date | undefined | null, formatStrin
   }
 };
 
+// Helper function to get next reminder date for Life Insurance with repeat reminders
+const getNextReminderDate = (policy: Policy, today: Date): Date | null => {
+  if (!policy.repeatReminder || policy.policyType !== 'Life Insurance') return null;
+  if (!policy.policyStartDate || !policy.policyEndDate) return null;
+
+  try {
+    const startDate = new Date(policy.policyStartDate);
+    const endDate = new Date(policy.policyEndDate);
+
+    // If today is before start date, next reminder is on start date
+    if (today < startDate) {
+      return startDate;
+    }
+
+    // If today is after end date, no more reminders
+    if (today > endDate) {
+      return null;
+    }
+
+    let nextReminder = new Date(startDate);
+
+    // Calculate next reminder based on frequency
+    switch (policy.repeatReminder) {
+      case 'Monthly':
+        while (nextReminder <= today) {
+          nextReminder = addMonths(nextReminder, 1);
+        }
+        break;
+      case 'Quarterly':
+        while (nextReminder <= today) {
+          nextReminder = addQuarters(nextReminder, 1);
+        }
+        break;
+      case 'Half-yearly':
+        while (nextReminder <= today) {
+          nextReminder = addMonths(nextReminder, 6);
+        }
+        break;
+      case 'Yearly':
+        while (nextReminder <= today) {
+          nextReminder = addYears(nextReminder, 1);
+        }
+        break;
+      default:
+        return null;
+    }
+
+    // Check if next reminder is within policy end date
+    if (nextReminder <= endDate) {
+      return nextReminder;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error calculating next reminder date:', error);
+    return null;
+  }
+};
+
 export function Reminders() {
-  const { policies, loading, error, refreshPolicies, deletePolicy } = usePolicies();
+  const { policies, loading, error, refreshPolicies, deletePolicy, updatePolicy } = usePolicies();
   const { isSubAgent } = useAuth();
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [selectedPolicy, setSelectedPolicy] = useState<(Policy & { daysRemaining: number }) | null>(null);
@@ -47,6 +106,10 @@ export function Reminders() {
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [policyForNotes, setPolicyForNotes] = useState<Policy | null>(null);
   const [notes, setNotes] = useState('');
+  const [showRenewalModal, setShowRenewalModal] = useState(false);
+  const [policyToRenew, setPolicyToRenew] = useState<Policy | null>(null);
+  const [renewalData, setRenewalData] = useState({ policyNo: '', startDate: '', endDate: '' });
+  const [isRenewing, setIsRenewing] = useState(false);
   const [groupHeads, setGroupHeads] = useState<any[]>([]);
   
   // Filter states
@@ -92,20 +155,26 @@ export function Reminders() {
     }
 
     // Generate table HTML from filtered policies
-    const tableRows = filteredPolicies.map(policy => `
+    const tableRows = filteredPolicies.map(policy => {
+      const reminderDate = (policy as any).reminderType === 'repeat' && (policy as any).nextReminderDate 
+        ? safeFormatDate((policy as any).nextReminderDate, 'dd/MM/yyyy')
+        : safeFormatDate(policy.policyEndDate, 'dd/MM/yyyy');
+      
+      return `
       <tr>
         <td>${policy.policyholderName}</td>
         <td>${policy.contactNo || '-'}</td>
         <td>${policy.policyNumber}</td>
         <td>${policy.policyType}</td>
         <td>${policy.insuranceCompany}</td>
-        <td>${safeFormatDate(policy.policyEndDate, 'dd/MM/yyyy')}</td>
+        <td>${reminderDate}</td>
         <td>${policy.daysRemaining}</td>
         <td>${(policy.premiumAmount || 0).toLocaleString('en-IN')}</td>
         <td>${policy.referenceFromName || '-'}</td>
         <td>${policy.memberOf ? getGroupHeadName(policy.memberOf) || 'N/A' : '-'}</td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
 
     const currentDate = new Date().toLocaleDateString('en-IN', { 
       year: 'numeric', 
@@ -232,8 +301,67 @@ export function Reminders() {
   
   // Function to handle renew policy
   const handleRenewPolicy = (policy: Policy) => {
-    toast.success(`Redirecting to renew policy for ${policy.policyholderName}...`);
-    // You can add navigation to renewal form or open renewal modal here
+    setPolicyToRenew(policy);
+    setRenewalData({
+      policyNo: policy.policyNumber || '',
+      startDate: policy.policyStartDate ? new Date(policy.policyStartDate).toISOString().split('T')[0] : '',
+      endDate: policy.policyEndDate ? new Date(policy.policyEndDate).toISOString().split('T')[0] : ''
+    });
+    setShowRenewalModal(true);
+  };
+
+  // Function to save renewal
+  const handleSaveRenewal = async () => {
+    if (!policyToRenew) return;
+    
+    if (!renewalData.policyNo.trim()) {
+      toast.error('Policy Number is required');
+      return;
+    }
+    
+    if (!renewalData.startDate) {
+      toast.error('Start Date is required');
+      return;
+    }
+    
+    if (!renewalData.endDate) {
+      toast.error('End Date is required');
+      return;
+    }
+
+    const startDate = new Date(renewalData.startDate);
+    const endDate = new Date(renewalData.endDate);
+
+    if (endDate <= startDate) {
+      toast.error('End Date must be after Start Date');
+      return;
+    }
+
+    try {
+      setIsRenewing(true);
+      
+      // Update the policy with new dates
+      await updatePolicy(policyToRenew.id, {
+        policyNumber: renewalData.policyNo,
+        policyStartDate: startDate.toISOString(),
+        policyEndDate: endDate.toISOString(),
+        startDate: renewalData.startDate,
+        expiryDate: renewalData.endDate
+      });
+
+      toast.success('Policy renewed successfully!');
+      setShowRenewalModal(false);
+      setRenewalData({ policyNo: '', startDate: '', endDate: '' });
+      setPolicyToRenew(null);
+      
+      // Refresh policies to update the reminders list
+      await refreshPolicies();
+    } catch (err) {
+      console.error('Error renewing policy:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to renew policy');
+    } finally {
+      setIsRenewing(false);
+    }
   };
   
   // Function to view document
@@ -302,7 +430,8 @@ export function Reminders() {
     const today = new Date();
     const thirtyDaysFromNow = addDays(today, 30);
 
-    return policies
+    // Regular expiring policies (within 30 days)
+    const regularExpiring = policies
       .filter(policy => {
         if (!policy.policyEndDate) return false;
         const expiryDate = new Date(policy.policyEndDate);
@@ -310,8 +439,32 @@ export function Reminders() {
       })
       .map(policy => ({
         ...policy,
-        daysRemaining: policy.policyEndDate ? differenceInDays(new Date(policy.policyEndDate), today) : 0
-      }))
+        daysRemaining: policy.policyEndDate ? differenceInDays(new Date(policy.policyEndDate), today) : 0,
+        reminderType: 'expiry' as const
+      }));
+
+    // Life Insurance policies with repeat reminders
+    const repeatReminderPolicies = policies
+      .filter(policy => {
+        if (!policy.repeatReminder || policy.policyType !== 'Life Insurance' || policy.isOneTimePolicy) return false;
+        const nextReminder = getNextReminderDate(policy, today);
+        if (!nextReminder) return false;
+        // Include if next reminder is within 30 days
+        return isBefore(nextReminder, thirtyDaysFromNow);
+      })
+      .map(policy => {
+        const nextReminder = getNextReminderDate(policy, today)!;
+        return {
+          ...policy,
+          daysRemaining: differenceInDays(nextReminder, today),
+          reminderType: 'repeat' as const,
+          nextReminderDate: nextReminder
+        };
+      });
+
+    // Combine both and sort by days remaining
+    return [...regularExpiring, repeatReminderPolicies]
+      .flat()
       .sort((a, b) => a.daysRemaining - b.daysRemaining);
   }, [policies]);
 
@@ -412,6 +565,35 @@ export function Reminders() {
   }, [expiringPolicies, searchQuery, selectedCompany, selectedPolicyType, selectedUrgency, selectedGroupHead, selectedCategory, selectedMonth, selectedYear, minPremium, maxPremium, startDate, endDate]);
 
   const generateReminderMessage = (policy: Policy, daysRemaining: number) => {
+    const policyWithReminder = expiringPolicies.find(p => p.id === policy.id);
+    const isLifeInsuranceRepeatReminder = (policyWithReminder as any)?.reminderType === 'repeat';
+    const reminderDate = isLifeInsuranceRepeatReminder && (policyWithReminder as any)?.nextReminderDate 
+      ? safeFormatDate((policyWithReminder as any).nextReminderDate, 'dd MMM yyyy')
+      : safeFormatDate(policy.policyEndDate, 'dd MMM yyyy');
+
+    // Life Insurance Repeat Reminder
+    if (isLifeInsuranceRepeatReminder) {
+      return `🔔 *Policy Reminder - ${(policy as any).repeatReminder}*
+
+Dear ${policy.policyholderName},
+
+This is your scheduled reminder for your ${policy.policyType} insurance policy.
+
+📋 *Policy Details:*
+• Policy Number: ${policy.policyNumber}
+• Insurance Company: ${policy.insuranceCompany}
+• Policy Start Date: ${safeFormatDate(policy.policyStartDate, 'dd MMM yyyy')}
+• Policy End Date: ${safeFormatDate(policy.policyEndDate, 'dd MMM yyyy')}
+• Reminder Frequency: ${(policy as any).repeatReminder}
+• Premium Amount: ₹${(policy.premiumAmount || 0).toLocaleString()}
+• Next Reminder: ${reminderDate}
+
+For assistance, contact us at OnClicks Policy Manager.
+
+Thank you!`;
+    }
+
+    // Standard Expiry Reminder (General Insurance and others)
     return `🔔 *Policy Renewal Reminder*
 
 Dear ${policy.policyholderName},
@@ -421,7 +603,7 @@ Your ${policy.policyType} insurance policy is expiring soon!
 📋 *Policy Details:*
 • Policy Number: ${policy.policyNumber}
 • Insurance Company: ${policy.insuranceCompany}
-• Expiry Date: ${safeFormatDate(policy.policyEndDate, 'dd MMM yyyy')}
+• Expiry Date: ${reminderDate}
 • Premium Amount: ₹${(policy.premiumAmount || 0).toLocaleString()}
 • Days Remaining: ${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'}
 
@@ -515,6 +697,14 @@ Thank you!`;
   const PolicyCard = ({ policy, daysRemaining }: { policy: Policy; daysRemaining: number }) => {
     const alertLevel = getAlertLevel(daysRemaining);
     const cardStyles = getAlertStyles(alertLevel);
+    
+    // Check if this is a repeat reminder policy
+    const policyWithReminder = expiringPolicies.find(p => p.id === policy.id);
+    const isRepeatReminder = (policyWithReminder as any)?.reminderType === 'repeat';
+    const reminderDate = isRepeatReminder && (policyWithReminder as any)?.nextReminderDate 
+      ? safeFormatDate((policyWithReminder as any).nextReminderDate, 'MMM dd, yyyy')
+      : safeFormatDate(policy.policyEndDate, 'MMM dd, yyyy');
+    const dateLabel = isRepeatReminder ? 'Next Reminder' : 'Expires';
 
     return (
       <div className={`rounded-sharp border-2 p-6 ${cardStyles} transition-all duration-200 hover:shadow-sm`}>
@@ -532,11 +722,16 @@ Thank you!`;
                 </div>
                 <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
                   <Calendar className="h-4 w-4 mr-2" />
-                  <span>Expires: {safeFormatDate(policy.policyEndDate, 'MMM dd, yyyy')}</span>
+                  <span>{dateLabel}: {reminderDate}</span>
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-300">
                   Policy: {policy.policyType} • {policy.policyNumber}
                 </div>
+                {isRepeatReminder && (
+                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                    Reminder: {(policy as any).repeatReminder} • Expires: {safeFormatDate(policy.policyEndDate, 'MMM dd, yyyy')}
+                  </div>
+                )}
                 <div className="text-sm font-medium text-gray-900 dark:text-white">
                   Premium: ₹{(policy.premiumAmount || 0).toLocaleString()}
                 </div>
@@ -559,9 +754,9 @@ Thank you!`;
               alertLevel === 'warning' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200' :
               'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200'
             }`}>
-              {daysRemaining === 0 ? 'Expires Today' : 
-               daysRemaining === 1 ? '1 day left' : 
-               `${daysRemaining} days left`}
+              {daysRemaining === 0 ? 'Today' : 
+               daysRemaining === 1 ? '1 day' : 
+               `${daysRemaining} days`}
             </div>
             <div>
               <div className="flex space-x-2 flex-wrap gap-1">
@@ -1447,6 +1642,79 @@ Thank you!`;
                   className="flex-1 px-4 py-2 bg-pink-600 text-white rounded-sharp hover:bg-pink-700 transition-colors duration-200 font-medium"
                 >
                   Save Notes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Renewal Modal */}
+        {showRenewalModal && policyToRenew && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-card max-w-md w-full shadow-2xl border border-gray-200 dark:border-gray-700">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
+                  <RefreshCw className="h-5 w-5 mr-2 text-blue-600 dark:text-blue-400" />
+                  Renew Policy
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Update policy dates for {policyToRenew.policyholderName}
+                </p>
+              </div>
+              <div className="px-6 py-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Policy Number
+                  </label>
+                  <input
+                    type="text"
+                    value={renewalData.policyNo}
+                    onChange={(e) => setRenewalData({ ...renewalData, policyNo: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-sharp focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="Enter policy number"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={renewalData.startDate}
+                    onChange={(e) => setRenewalData({ ...renewalData, startDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-sharp focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={renewalData.endDate}
+                    onChange={(e) => setRenewalData({ ...renewalData, endDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-sharp focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowRenewalModal(false);
+                    setPolicyToRenew(null);
+                    setRenewalData({ policyNo: '', startDate: '', endDate: '' });
+                  }}
+                  disabled={isRenewing}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-sharp hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveRenewal}
+                  disabled={isRenewing}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-sharp hover:bg-blue-700 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isRenewing ? 'Saving...' : 'Save Renewal'}
                 </button>
               </div>
             </div>

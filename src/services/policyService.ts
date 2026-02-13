@@ -79,6 +79,8 @@ export const policyService = {
         fileId: row.file_id,
         driveFileUrl: row.drive_file_url,
         documentsFolderLink: row.documents_folder_link,
+        // Life Insurance repeat reminder
+        repeatReminder: row.repeat_reminder,
       }));
 
       console.log(`Found ${policies.length} active policies`);
@@ -150,6 +152,8 @@ export const policyService = {
         file_id: policyData.fileId,
         drive_file_url: policyData.driveFileUrl,
         documents_folder_link: policyData.documentsFolderLink,
+        // Life Insurance repeat reminder
+        repeat_reminder: policyData.repeatReminder,
       };
 
       const { data, error } = await supabase
@@ -212,6 +216,7 @@ export const policyService = {
       if (updates.nomineeRelationship !== undefined) dbUpdates.nominee_relationship = updates.nomineeRelationship;
       if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
       if (updates.documents !== undefined) dbUpdates.documents = updates.documents;
+      if (updates.repeatReminder !== undefined) dbUpdates.repeat_reminder = updates.repeatReminder;
 
       const { error } = await supabase
         .from('policies')

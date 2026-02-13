@@ -65,6 +65,8 @@ export interface Policy {
   hasClaimSettled?: boolean;
   settledAmount?: string;
   settlementDate?: string;
+  // Life Insurance Reminder fields
+  repeatReminder?: 'Monthly' | 'Quarterly' | 'Half-yearly' | 'Yearly' | '';
 }
 
 export interface PolicyFormData {
@@ -107,6 +109,8 @@ export interface PolicyFormData {
   referenceFromName?: string;
   isOneTimePolicy?: boolean;
   ncbPercentage?: string;
+  // Life Insurance Reminder
+  repeatReminder?: 'Monthly' | 'Quarterly' | 'Half-yearly' | 'Yearly' | '';
 }
 
 export interface AIExtractedData {

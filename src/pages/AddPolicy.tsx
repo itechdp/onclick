@@ -1260,12 +1260,46 @@ export function AddPolicy() {
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
+    const isTwoOrFourWheeler = productType.toLowerCase().includes('two-wheeler') || 
+      productType.toLowerCase().includes('two wheeler') ||
+      productType.toLowerCase().includes('four-wheeler') ||
+      productType.toLowerCase().includes('four wheeler') ||
+      productType.toLowerCase().includes('private car');
+
     if (!formData.policyholderName.trim()) {
       newErrors.policyholderName = 'Policyholder name is required';
     }
 
     if (!productType.trim()) {
       newErrors.productType = 'Product type is required';
+    }
+
+    if (!(formData.contactNo || '').trim()) {
+      newErrors.contactNo = 'Contact number is required';
+    }
+
+    if (!(formData.emailId || '').trim()) {
+      newErrors.emailId = 'Email ID is required';
+    }
+
+    if (!formData.insuranceCompany.trim()) {
+      newErrors.insuranceCompany = 'Insurance company is required';
+    }
+
+    if (!formData.policyNumber.trim()) {
+      newErrors.policyNumber = 'Policy number is required';
+    }
+
+    if (!formData.startDate.trim()) {
+      newErrors.startDate = 'Start date is required';
+    }
+
+    if (!formData.expiryDate.trim()) {
+      newErrors.expiryDate = 'End date is required';
+    }
+
+    if (!isTwoOrFourWheeler && !(formData.netPremium || '').trim()) {
+      newErrors.netPremium = 'Net premium is required';
     }
 
     setErrors(newErrors);
@@ -2110,7 +2144,7 @@ export function AddPolicy() {
                   {/* Contact No */}
                   <div>
                     <label htmlFor="contactNo" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Contact No
+                      Contact No <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="tel"
@@ -2118,15 +2152,21 @@ export function AddPolicy() {
                       name="contactNo"
                       value={formData.contactNo}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm"
+                      required
+                      className={`w-full px-4 py-3 border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm ${
+                        errors.contactNo ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="Enter contact number"
                     />
+                    {errors.contactNo && (
+                      <p className="text-red-500 text-sm mt-1">{errors.contactNo}</p>
+                    )}
                   </div>
 
                   {/* Email ID */}
                   <div>
                     <label htmlFor="emailId" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Email ID
+                      Email ID <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
@@ -2134,15 +2174,21 @@ export function AddPolicy() {
                       name="emailId"
                       value={formData.emailId}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm"
+                      required
+                      className={`w-full px-4 py-3 border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm ${
+                        errors.emailId ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="Enter email address"
                     />
+                    {errors.emailId && (
+                      <p className="text-red-500 text-sm mt-1">{errors.emailId}</p>
+                    )}
                   </div>
 
                   {/* Insurance Company Name */}
                   <div className="relative">
                     <label htmlFor="insuranceCompany" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Insurance Company Name
+                      Insurance Company Name <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <input
@@ -2151,6 +2197,7 @@ export function AddPolicy() {
                         name="insuranceCompany"
                         value={formData.insuranceCompany}
                         onChange={handleInputChange}
+                        required
                         onFocus={() => {
                           if (formData.insuranceCompany.trim()) {
                             const filtered = insuranceCompanies.filter(company =>
@@ -2160,12 +2207,17 @@ export function AddPolicy() {
                             setShowInsuranceDropdown(filtered.length > 0);
                           }
                         }}
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm"
+                        className={`w-full px-4 py-3 border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm ${
+                          errors.insuranceCompany ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-gray-300 dark:border-gray-600'
+                        }`}
                         placeholder="Type to search insurance company..."
                         autoComplete="off"
                       />
                       <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
                     </div>
+                    {errors.insuranceCompany && (
+                      <p className="text-red-500 text-sm mt-1">{errors.insuranceCompany}</p>
+                    )}
                     
                     {/* Autocomplete Dropdown */}
                     {showInsuranceDropdown && filteredInsuranceCompanies.length > 0 && (
@@ -2187,7 +2239,7 @@ export function AddPolicy() {
                   {/* Policy Number */}
                   <div>
                     <label htmlFor="policyNumber" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Policy Number
+                      Policy Number <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -2195,15 +2247,21 @@ export function AddPolicy() {
                       name="policyNumber"
                       value={formData.policyNumber}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm"
+                      required
+                      className={`w-full px-4 py-3 border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm ${
+                        errors.policyNumber ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="Enter policy number"
                     />
+                    {errors.policyNumber && (
+                      <p className="text-red-500 text-sm mt-1">{errors.policyNumber}</p>
+                    )}
                   </div>
 
                   {/* Start Date */}
                   <div>
                     <label htmlFor="startDate" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Start Date
+                      Start Date <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
@@ -2211,14 +2269,20 @@ export function AddPolicy() {
                       name="startDate"
                       value={formData.startDate}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm"
+                      required
+                      className={`w-full px-4 py-3 border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm ${
+                        errors.startDate ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                     />
+                    {errors.startDate && (
+                      <p className="text-red-500 text-sm mt-1">{errors.startDate}</p>
+                    )}
                   </div>
 
                   {/* End Date */}
                   <div>
                     <label htmlFor="expiryDate" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      End Date
+                      End Date <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
@@ -2226,8 +2290,14 @@ export function AddPolicy() {
                       name="expiryDate"
                       value={formData.expiryDate}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm"
+                      required
+                      className={`w-full px-4 py-3 border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm ${
+                        errors.expiryDate ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                     />
+                    {errors.expiryDate && (
+                      <p className="text-red-500 text-sm mt-1">{errors.expiryDate}</p>
+                    )}
                   </div>
 
                   {/* Motor Vehicle Specific Fields */}
@@ -2383,7 +2453,7 @@ export function AddPolicy() {
                       {/* Net Premium - For Other Product Types */}
                       <div>
                         <label htmlFor="netPremium" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                          Net Premium
+                          Net Premium <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="number"
@@ -2391,9 +2461,15 @@ export function AddPolicy() {
                           name="netPremium"
                           value={formData.netPremium}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm"
+                          required
+                          className={`w-full px-4 py-3 border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm ${
+                            errors.netPremium ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-gray-300 dark:border-gray-600'
+                          }`}
                           placeholder="Enter net premium amount"
                         />
+                        {errors.netPremium && (
+                          <p className="text-red-500 text-sm mt-1">{errors.netPremium}</p>
+                        )}
                       </div>
                     </>
                   )}

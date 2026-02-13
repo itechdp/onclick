@@ -4,7 +4,7 @@
 ALTER TABLE policies 
 ADD COLUMN IF NOT EXISTS repeat_reminder TEXT;
 
--- Also add to lapsed_policies table for consistency
+-- Also add to lapsed_policies table for consistency\
 ALTER TABLE lapsed_policies 
 ADD COLUMN IF NOT EXISTS repeat_reminder TEXT;
 

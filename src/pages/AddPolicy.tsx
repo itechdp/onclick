@@ -7,6 +7,7 @@ import { PolicyFormData, AIExtractedData, Policy } from '../types';
 import { FileText, User, Save, ArrowLeft, Upload, Sparkles, ToggleLeft, ToggleRight, Lock, X, ChevronDown, Bell } from 'lucide-react';
 import { getWebhookUrl, debugLog, config } from '../config/webhookConfig';
 import { UpgradeModal } from '../components/UpgradeModal';
+import { BulkUpload } from '../components/BulkUpload';
 import { storageService } from '../services/storageService';
 import { policySettingsService } from '../services/policySettingsService';
 import { DEFAULT_INSURANCE_COMPANIES, DEFAULT_PRODUCT_TYPES } from '../constants/policyDropdowns';
@@ -67,6 +68,7 @@ export function AddPolicy() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAIProcessing, setIsAIProcessing] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [activeTab, setActiveTab] = useState<'single' | 'bulk'>('single');
 
   // Insurance company autocomplete states
   const [showInsuranceDropdown, setShowInsuranceDropdown] = useState(false);
@@ -1679,15 +1681,44 @@ export function AddPolicy() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 transition-colors duration-200">
-                     <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
-              <FileText className="h-6 w-6 mr-3 text-blue-600 dark:text-blue-400" />
-              Policy Information
-            </h2>
-                         <p className="text-gray-600 dark:text-gray-300 mt-1">Please provide the policyholder name for your general insurance policy</p>
+                     {/* Tab Navigation */}
+          <div className="flex border-b border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setActiveTab('single')}
+              className={`flex-1 px-6 py-4 font-semibold flex items-center justify-center gap-2 transition-colors duration-200 ${
+                activeTab === 'single'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-gray-700/50'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+              }`}
+            >
+              <FileText className="h-5 w-5" />
+              Add Single Policy
+            </button>
+            <button
+              onClick={() => setActiveTab('bulk')}
+              className={`flex-1 px-6 py-4 font-semibold flex items-center justify-center gap-2 transition-colors duration-200 ${
+                activeTab === 'bulk'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-gray-700/50'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+              }`}
+            >
+              <Upload className="h-5 w-5" />
+              Bulk Upload (CSV)
+            </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4 lg:space-y-6">
+          {/* Single Policy Tab */}
+          {activeTab === 'single' && (
+            <>
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
+                  <FileText className="h-6 w-6 mr-3 text-blue-600 dark:text-blue-400" />
+                  Policy Information
+                </h2>
+                <p className="text-gray-600 dark:text-gray-300 mt-1">Please provide the policyholder name for your general insurance policy</p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4 lg:space-y-6">
             {/* AI Upload Section */}
                          <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-gray-700 dark:to-gray-600 rounded-lg p-4 border border-purple-200 dark:border-gray-600">
                              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center mb-3">
@@ -2922,6 +2953,21 @@ export function AddPolicy() {
               </button>
             </div>
           </form>
+            </>
+          )}
+
+          {/* Bulk Upload Tab */}
+          {activeTab === 'bulk' && (
+            <div className="p-6">
+              <BulkUpload
+                onSuccess={() => {
+                  // Optionally refresh policies or show success message
+                  toast.success('Policies uploaded successfully! Refreshing...');
+                  // You could call a refresh function here if needed
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
       

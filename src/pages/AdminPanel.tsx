@@ -25,6 +25,14 @@ export function AdminPanel() {
   const [lockReason, setLockReason] = useState('');
   const [subscriptionDays, setSubscriptionDays] = useState(30);
 
+  const formatInr = (value: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
   useEffect(() => {
     // Check if user is admin
     if (!currentUser || currentUser.role !== 'admin') {
@@ -64,6 +72,7 @@ export function AdminPanel() {
         createdAt: new Date(userData.created_at || Date.now()),
         lastLogin: userData.last_login ? new Date(userData.last_login) : undefined,
         subscriptionStatus: (userData.subscription_status || 'trial') as 'trial' | 'active' | 'expired' | 'locked',
+        subscriptionPlan: userData.subscription_plan ? Number(userData.subscription_plan) : undefined,
         trialStartDate: userData.trial_start_date ? new Date(userData.trial_start_date) : undefined,
         trialEndDate: userData.trial_end_date ? new Date(userData.trial_end_date) : undefined,
         subscriptionStartDate: userData.subscription_start_date ? new Date(userData.subscription_start_date) : undefined,
@@ -289,8 +298,7 @@ export function AdminPanel() {
   };
 
   const filteredUsers = users.filter(user => {
-    // Filter out admins from the list (optional, or show them separately)
-    // if (user.role === 'admin') return false;
+    if (user.role === 'admin') return false;
 
     const matchesSearch = 
       user.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -301,13 +309,38 @@ export function AdminPanel() {
     return matchesSearch && matchesStatus;
   });
 
+  const nonAdminUsers = users.filter(u => u.role !== 'admin');
+
   const stats = {
-    total: users.filter(u => u.role !== 'admin').length,
-    trial: users.filter(u => u.subscriptionStatus === 'trial').length,
-    active: users.filter(u => u.subscriptionStatus === 'active').length,
-    expired: users.filter(u => u.subscriptionStatus === 'expired').length,
-    locked: users.filter(u => u.subscriptionStatus === 'locked').length
+    total: nonAdminUsers.length,
+    trial: nonAdminUsers.filter(u => u.subscriptionStatus === 'trial').length,
+    active: nonAdminUsers.filter(u => u.subscriptionStatus === 'active').length,
+    expired: nonAdminUsers.filter(u => u.subscriptionStatus === 'expired').length,
+    locked: nonAdminUsers.filter(u => u.subscriptionStatus === 'locked').length
   };
+
+  const activeNonAdminUsers = nonAdminUsers.filter(
+    (user) => user.subscriptionStatus === 'active'
+  );
+
+  const planSummaries = activeNonAdminUsers.reduce<Record<string, { count: number; income: number }>>(
+    (acc, user) => {
+      const planValue = user.subscriptionPlan ?? 0;
+      const key = planValue ? String(planValue) : 'unknown';
+      if (!acc[key]) {
+        acc[key] = { count: 0, income: 0 };
+      }
+      acc[key].count += 1;
+      acc[key].income += planValue || 0;
+      return acc;
+    },
+    {}
+  );
+
+  const totalMonthlyIncome = Object.values(planSummaries).reduce(
+    (sum, item) => sum + item.income,
+    0
+  );
 
   if (!currentUser || currentUser.role !== 'admin') {
     return null;
@@ -387,6 +420,33 @@ export function AdminPanel() {
             </div>
           </div>
 
+          {/* Revenue Summary */}
+          <div className="bg-white dark:bg-gray-800 rounded-card shadow-sm p-4 mb-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Monthly Income (Active Users)</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {formatInr(totalMonthlyIncome)}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {Object.entries(planSummaries).map(([plan, summary]) => (
+                  <div
+                    key={plan}
+                    className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-200"
+                  >
+                    <span className="font-semibold">{plan === 'unknown' ? 'Unknown' : formatInr(Number(plan))}</span>
+                    <span className="ml-2">({summary.count})</span>
+                    <span className="ml-2">{formatInr(summary.income)}</span>
+                  </div>
+                ))}
+                {Object.keys(planSummaries).length === 0 && (
+                  <div className="text-sm text-gray-500 dark:text-gray-400">No active subscriptions</div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Filters */}
           <div className="bg-white dark:bg-gray-800 rounded-card shadow-sm p-4 mb-6">
             <div className="flex flex-col md:flex-row gap-4">
@@ -431,6 +491,7 @@ export function AdminPanel() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Mobile</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Role</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Policies</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Plan</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Days Left</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">End Date</th>
@@ -441,13 +502,13 @@ export function AdminPanel() {
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-12 text-center">
+                    <td colSpan={10} className="px-6 py-12 text-center">
                       <RefreshCw className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
                     </td>
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={10} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                       No users found
                     </td>
                   </tr>
@@ -456,6 +517,7 @@ export function AdminPanel() {
                     const daysRemaining = supabaseAuthService.getDaysRemaining(user);
                     const endDate = user.subscriptionStatus === 'trial' ? user.trialEndDate : user.subscriptionEndDate;
                     const policyCount = policyCounts[user.id] || 0;
+                    const planValue = user.subscriptionPlan;
 
                     return (
                       <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -490,6 +552,11 @@ export function AdminPanel() {
                             }`}>
                               {policyCount}
                             </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900 dark:text-white">
+                            {planValue ? formatInr(planValue) : '-'}
                           </div>
                         </td>
                         <td className="px-6 py-4">{getStatusBadge(user)}</td>

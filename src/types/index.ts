@@ -223,6 +223,7 @@ export interface AppUser {
   lastLogin?: Date;
   // Subscription fields for SaaS
   subscriptionStatus: 'trial' | 'active' | 'expired' | 'locked';
+  subscriptionPlan?: number;
   trialStartDate?: Date;
   trialEndDate?: Date;
   subscriptionStartDate?: Date;
@@ -249,6 +250,8 @@ export interface SupabaseUserData {
   last_login?: string;
   subscriptionStatus?: string;
   subscription_status?: string;
+  subscriptionPlan?: number | string;
+  subscription_plan?: number | string;
   trialStartDate?: string;
   trial_start_date?: string;
   trialEndDate?: string;

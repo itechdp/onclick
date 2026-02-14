@@ -25,6 +25,7 @@ export function AdminPanel() {
   const [lockReason, setLockReason] = useState('');
   const [subscriptionDays, setSubscriptionDays] = useState(30);
   const [selectedPlanValue, setSelectedPlanValue] = useState<number | string>(199);
+  const [planFilter, setPlanFilter] = useState<string | null>(null);
 
   const formatInr = (value: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -34,9 +35,22 @@ export function AdminPanel() {
     }).format(value);
   };
 
+  const normalizePlanValue = (rawValue: number | string | null | undefined) => {
+    if (rawValue === null || rawValue === undefined || rawValue === '') return undefined;
+    if (rawValue === 'monthly') return 'monthly';
+    const parsed = Number(rawValue);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  const getPlanKey = (planValue?: number | string) => {
+    if (planValue === 'monthly') return 'monthly';
+    if (typeof planValue === 'number' && Number.isFinite(planValue)) return String(planValue);
+    return 'unknown';
+  };
+
   const getPlanLabel = (planValue?: number | string) => {
     if (planValue === 'monthly') return 'Monthly';
-    if (typeof planValue === 'number') return formatInr(planValue);
+    if (typeof planValue === 'number' && Number.isFinite(planValue)) return formatInr(planValue);
     return '-';
   };
 
@@ -79,7 +93,7 @@ export function AdminPanel() {
         createdAt: new Date(userData.created_at || Date.now()),
         lastLogin: userData.last_login ? new Date(userData.last_login) : undefined,
         subscriptionStatus: (userData.subscription_status || 'trial') as 'trial' | 'active' | 'expired' | 'locked',
-        subscriptionPlan: userData.subscription_plan ? Number(userData.subscription_plan) : undefined,
+        subscriptionPlan: normalizePlanValue(userData.subscription_plan),
         trialStartDate: userData.trial_start_date ? new Date(userData.trial_start_date) : undefined,
         trialEndDate: userData.trial_end_date ? new Date(userData.trial_end_date) : undefined,
         subscriptionStartDate: userData.subscription_start_date ? new Date(userData.subscription_start_date) : undefined,
@@ -338,7 +352,11 @@ export function AdminPanel() {
 
     const matchesStatus = filterStatus === 'all' || user.subscriptionStatus === filterStatus;
 
-    return matchesSearch && matchesStatus;
+    const matchesPlan = planFilter
+      ? user.subscriptionStatus === 'active' && getPlanKey(user.subscriptionPlan) === planFilter
+      : true;
+
+    return matchesSearch && matchesStatus && matchesPlan;
   });
 
   const nonAdminUsers = users.filter(u => u.role !== 'admin');
@@ -357,9 +375,10 @@ export function AdminPanel() {
 
   const planSummaries = activeNonAdminUsers.reduce<Record<string, { count: number; income: number }>>(
     (acc, user) => {
-      const planValue = user.subscriptionPlan ?? 'unknown';
-      const key = String(planValue);
-      const numericValue = typeof planValue === 'number' ? planValue : 0;
+      const key = getPlanKey(user.subscriptionPlan);
+      const numericValue = typeof user.subscriptionPlan === 'number' && Number.isFinite(user.subscriptionPlan)
+        ? user.subscriptionPlan
+        : 0;
       if (!acc[key]) {
         acc[key] = { count: 0, income: 0 };
       }
@@ -463,17 +482,41 @@ export function AdminPanel() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
+                {Object.keys(planSummaries).length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPlanFilter(null);
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                      planFilter === null
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    All Plans
+                  </button>
+                )}
                 {Object.entries(planSummaries).map(([plan, summary]) => (
-                  <div
+                  <button
                     key={plan}
-                    className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-200"
+                    type="button"
+                    onClick={() => {
+                      setPlanFilter(planFilter === plan ? null : plan);
+                      setFilterStatus('active');
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                      planFilter === plan
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
                   >
                     <span className="font-semibold">
                       {plan === 'unknown' ? 'Unknown' : getPlanLabel(plan === 'monthly' ? 'monthly' : Number(plan))}
                     </span>
                     <span className="ml-2">({summary.count})</span>
                     <span className="ml-2">{formatInr(summary.income)}</span>
-                  </div>
+                  </button>
                 ))}
                 {Object.keys(planSummaries).length === 0 && (
                   <div className="text-sm text-gray-500 dark:text-gray-400">No active subscriptions</div>
@@ -501,7 +544,12 @@ export function AdminPanel() {
                 {(['all', 'trial', 'active', 'expired', 'locked'] as const).map((status) => (
                   <button
                     key={status}
-                    onClick={() => setFilterStatus(status)}
+                    onClick={() => {
+                      setFilterStatus(status);
+                      if (status !== 'active') {
+                        setPlanFilter(null);
+                      }
+                    }}
                     className={`px-4 py-2 rounded-sharp font-medium capitalize transition-colors ${
                       filterStatus === status
                         ? 'bg-blue-600 text-white'

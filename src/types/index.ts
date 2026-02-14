@@ -223,7 +223,7 @@ export interface AppUser {
   lastLogin?: Date;
   // Subscription fields for SaaS
   subscriptionStatus: 'trial' | 'active' | 'expired' | 'locked';
-  subscriptionPlan?: number;
+  subscriptionPlan?: number | string;
   trialStartDate?: Date;
   trialEndDate?: Date;
   subscriptionStartDate?: Date;
